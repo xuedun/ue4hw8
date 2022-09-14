@@ -1,0 +1,17 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{A1C9C5F5-4B60-57B8-D800-69B004DDC72E}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "TENFPS",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"CoreUObject"
+			]
+		}
+	]
+}
