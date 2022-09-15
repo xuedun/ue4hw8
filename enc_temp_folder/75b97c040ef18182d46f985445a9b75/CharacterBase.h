@@ -153,6 +153,7 @@ public:
 		void EquipWeaponAnimation();
 	UFUNCTION(BlueprintCallable)
 		void EndWeaponAnimation();
+	void LocalFire();
 #pragma endregion
 
 #pragma region AnimationNotify

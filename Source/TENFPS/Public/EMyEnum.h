@@ -17,6 +17,16 @@ class TENFPS_API UEMyEnum : public UObject
 };
 
 UENUM(BlueprintType)
+enum class GaState : uint8
+{
+	Start,
+	MainMenu,
+	ServerList,
+	LoadingScreen,
+	Playing
+};
+
+UENUM(BlueprintType)
 enum class EWeaponType : uint8
 {
 	TwoHandWeapon,

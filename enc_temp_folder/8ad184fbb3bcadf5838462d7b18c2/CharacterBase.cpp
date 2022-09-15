@@ -187,13 +187,7 @@ void ACharacterBase::BeginPlay()
 	Health = 100;
 	OnTakePointDamage.AddDynamic(this,&ACharacterBase::OnHit);
 	StartWithWeapon();
-
 	PlayerController = Cast<AMyPlayerController>(GetController());
-	PlayerController = Cast<AMyPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(),0));
-//	ClientCreateUI();
-//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Hellow"));
-//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, UKismetSystemLibrary::GetObjectName(GetController()));
-//	UKismetSystemLibrary::PrintString(GetWorld(),UKismetSystemLibrary::GetObjectName(PlayerController));
 	if (PlayerController)
 	{
 		PlayerController->CreatePlayerUI();
@@ -330,6 +324,8 @@ void ACharacterBase::ChangeToNextWeapon()
 	}
 }
 
+
+
 void ACharacterBase::ChangeToLastWeapon()
 {
 	if (ChangeWeaponLock) return;
@@ -353,6 +349,7 @@ void ACharacterBase::ChangeToLastWeapon()
 	}
 }
 
+
 void ACharacterBase::EndWeaponAnimation()
 {
 	CurrentWeaponIndex = TargetWeaponIndex;
@@ -360,16 +357,24 @@ void ACharacterBase::EndWeaponAnimation()
 	ClientUpdateAmmoUI(EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo, EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo);
 }
 
+void ACharacterBase::LocalFire()
+{
+	if (bCombatReady && EquipWeapons[CurrentWeaponIndex].Weapon)
+	{
+		EquipWeapons[CurrentWeaponIndex].Weapon->FireAnimation();
+		//			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		//			AnimInstance->Montage_Play(FireMontage);
+		PlayerController->PlayerCameraShake(EquipWeapons[CurrentWeaponIndex].Weapon->CameraShakeClass);
+		PlayerController->DoCrosshairRecoil();
+	}
+}
+
 void ACharacterBase::StartWithWeapon()
 {
-	
 	if (HasAuthority())
 	{
-	//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("B")));
 		PurchaseWeapon();
-		return;
 	}
-//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("A")));
 }
 
 void ACharacterBase::PurchaseWeapon()
@@ -498,7 +503,6 @@ void ACharacterBase::OnHit(AActor* DamagedActor, float Damage, class AController
 void ACharacterBase::PVPDeath(AActor* DamageActor)
 {
 	AMyPlayerController* DiePlayerController = Cast<AMyPlayerController>(GetController());
-//	UKismetSystemLibrary::PrintString(GetWorld(), UKismetSystemLibrary::GetObjectName(DiePlayerController));
 	if (DiePlayerController)
 	{
 		DiePlayerController->PVPDeath(DamageActor);
@@ -511,6 +515,7 @@ void ACharacterBase::FireWeaponPrimary()
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Fire"));
 	ServerFireRifleWeapon(GetFollowCamera()->GetComponentLocation(), GetFollowCamera()->GetComponentRotation(),false);
 	ClientFire();
+//	LocalFire();
 }
 
 void ACharacterBase::StopFirePrimary()
@@ -561,12 +566,12 @@ void ACharacterBase::ClientUpdateHealthUI_Implementation(float NewHealth)
 void ACharacterBase::ServerFireRifleWeapon_Implementation(FVector CameraLocation, FRotator CameraRotation, bool IsMoving)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Fire"));
-	EquipWeapons[CurrentWeaponIndex].Weapon->MultiShootingEffect();
-	EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo -= 1;
-	MulticastPlayAnimation(FireMontage);
-	ClientUpdateAmmoUI(EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo, EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo);
+//	EquipWeapons[CurrentWeaponIndex].Weapon->MultiShootingEffect();
+//	EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo -= 1;
+//	MulticastPlayAnimation(FireMontage);
+//	ClientUpdateAmmoUI(EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo, EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo);
 
-	RifleLineTrace(CameraLocation, CameraRotation, IsMoving);
+//	RifleLineTrace(CameraLocation, CameraRotation, IsMoving);
 
 }
 
