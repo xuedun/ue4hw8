@@ -8,6 +8,7 @@
 #include "Net/UnrealNetwork.h"
 #include "CharacterBase.generated.h"
 
+class AWeaponBase;
 
 UCLASS()
 class TENFPS_API ACharacterBase : public ACharacter
@@ -16,169 +17,200 @@ class TENFPS_API ACharacterBase : public ACharacter
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
-#pragma region Component
-		/** Camera boom positioning the camera behind the character */
-		UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* CameraBoom;
-
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UCameraComponent* FollowCamera;
-private:
-	UPROPERTY(BlueprintReadOnly,meta = (AllowPrivateAccess = "true"))
-	class AMyPlayerController* PlayerController;
-//	UAnimInstance* AnimInstance;
-#pragma endregion
 public:
 	ACharacterBase();
-
-	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-		float BaseTurnRate;
-
-	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-		float BaseLookUpRate;
+#pragma region Component
 
 protected:
-
-	/** Resets HMD orientation in VR. */
-	void OnResetVR();
-
-	/** Called for forwards/backward input */
-	void MoveForward(float Value);
-
-	/** Called for side to side input */
-	void MoveRight(float Value);
-
-	/**
-	 * Called via input to turn at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void TurnAtRate(float Rate);
-
-	/**
-	 * Called via input to turn look up/down at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void LookUpAtRate(float Rate);
-
-	/** Handler for when a touch input begins. */
-	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
-
-	/** Handler for when a touch input stops. */
-	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
-
-protected:
-	// APawn interface
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	// End of APawn interface
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class USpringArmComponent* CameraBoom;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class UCameraComponent* FollowCamera;
+	UPROPERTY(BlueprintReadOnly,meta = (AllowPrivateAccess = "true"))
+		class AMyPlayerController* PlayerController;
+	FVector LookAtPoint;
+	FVector UpdateLookAtPoint();
+	UAnimInstance* AnimInstance;
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+#pragma endregion
 
+#pragma region InputComponent
+public:
+	UPROPERTY(Replicated)
+		float Pitch;
+	UPROPERTY(Replicated)
+		float Yaw;
+	UPROPERTY(Replicated,EditAnywhere,BlueprintReadWrite)
+		bool bIsPlaying;
+	bool bFrendHurt = true;
+	float Ani_Direction;
+	float Ani_Speed;
+
+public:
+	void InputFirePressed();
+	void InputFireReleased();
+	void ChangeToNextWeapon();
+
+protected:
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
+	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
+
+	void MoveForward(float Value);
+	void MoveRight(float Value);
+
+	void ADS();
+	void StopADS();	
+	
+	void WeaponR();
+	void WeaponL();
+	void WeaponT();
+
+
+	void ChangeToLastWeapon();	
+
+	void StartGame();
+#pragma endregion
 
 #pragma region Weapon
-
-	int8 CurrentWeaponIndex;
-	int8 TargetWeaponIndex;
-	int8 MaxWeaponNum = 3;
-
-	bool ChangeWeaponLock=false;
-	FVector LookAtPoint;
+public:
+	bool ChangeWeaponLock = false;
 	UPROPERTY(Replicated)
 	bool bADS = false;
 	UPROPERTY(Replicated)
 	bool bCombatReady = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		TArray<float> AimBaseLineOffset;
-
+	int8 MaxWeaponNum;
+	int8 CurrentWeaponIndex;
+	int8 TargetWeaponIndex;
 	EWeaponType CurrentWeaponType;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FVector GripLOffset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FRotator GripLRotator;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FVector MagOffset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FRotator MagRotator;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FVector AimBaseLineOffset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FRotator AimBaseLineRotator;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool bLeftIK;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float HookDistance;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float HookBaseDamage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<FSWeaponPanelInfo> EquipWeapons;
+	class AMyAmmo* Ammo;
 
-
+//换武器和开火蒙太奇在蓝图中设置
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<class UAnimMontage*> EquipWeaponMontages;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<class UAnimMontage*> HolsterWeaponMontages;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UAnimMontage* FireMontage;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UAnimMontage* ReloadMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UAnimMontage* HookMontage;
 	void EquipWeapon(AWeaponBase* Weapon);
-
-
-#pragma region Fire
-public:
-	//单发
-	void Fire();
-	void InputFirePressed();
-	void InputFireReleased();
-
-	
-	void FireWeaponPrimary();
-	void StopFirePrimary();
-	void RifleLineTrace(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
-	void DamagePlayer(UPhysicalMaterial* PhysicalMaterial,AActor* DamagedActor, FVector& HitFromDirection, FHitResult& HitInfo);
-	UFUNCTION()
-		void OnHit(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent, FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser);
-	float Health;
-
-	void PVPDeath(AActor* DamageActor);
-#pragma endregion
-
-
-	void ADS();
-	void StopADS();
-
-	void ClientChangeWeaponAnimation(int8 index);
-
-	void WeaponR();
-	void WeaponL();
-	void WeaponT();
-
-	void ChangeToNextWeapon();
-	void ChangeToLastWeapon();
-
 
 	void StartWithWeapon();
 	void PurchaseWeapon();
 
+	void Reload();
+public:
+	AWeaponBase* GetCurrentWeapon();
+#pragma endregion
+
+#pragma region Fire
+public:
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+		bool bLineTraceFire;
+	class AMyProjectile* Bullet;
+	//单发
+	void Fire();
+	virtual void FireWeaponPrimary();
+	void StopFirePrimary();
+
+	void RifleLineTrace(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
+	void DamagePlayer(UPhysicalMaterial* PhysicalMaterial,AActor* DamagedActor, FVector& HitFromDirection, FHitResult& HitInfo);
+
+	void SpawnBullet();
+#pragma endregion
+
+#pragma region Health
+	float Health;
+	bool bDead = false;
+	UFUNCTION()
+		virtual void OnHit(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent, FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser);
+	UFUNCTION(BlueprintCallable)
+		void PVPDeath(AActor* DamageActor);
+	UFUNCTION(BlueprintCallable)
+		virtual void PVEDeath(AActor* DamageCauser);
+public:
+	bool Is_Alive();
+	
+#pragma endregion
+
+
+#pragma region AnimationNotify
+public:
+	void GrabWeaponR();
+	void OnHolster();
+	void GrabWeaponLTemp();
+
+	void HideClip();
+	void UnhideClip();
+	void DropClip();
+	void GetNewClip();
+
+	void StartHookTrace();
+	void EndHookTrace();
+	FVector StartLocation;
 	UFUNCTION(BlueprintCallable)
 		void EquipWeaponAnimation();
 	UFUNCTION(BlueprintCallable)
 		void EndWeaponAnimation();
+
 #pragma endregion
-
-#pragma region AnimationNotify
-	void GrabWeaponR();
-	void OnHolster();
-	void GrabWeaponLTemp();
-#pragma endregion
-public:
-	UPROPERTY(Replicated)
-		float Pitch;
-	UPROPERTY(Replicated)
-		float Yaw;
-	float Client_Pitch, Client_Yaw;
-
-
 
 
 #pragma region Network
+#pragma region Animation
+
+#pragma endregion
 	UFUNCTION(Client, Reliable)
 		void ClientFire();
 
 	UFUNCTION(Client, Reliable)
-		void ClientUpdateAmmoUI(int32 ClipCurrentAmmo,int32 GunCurrentAmmo);
+		void ClientUpdateAmmoUI(int32 ClipCurrentAmmo,int32 GunCurrentAmmo, bool HideAmmoUI);
 
 	UFUNCTION(Client, Reliable)
 		void ClientUpdateHealthUI(float NewHealth);
+
+	UFUNCTION(Server, Reliable, WithValidation,BlueprintCallable)
+		void DestoryAllWeapon();
+	void DestoryAllWeapon_Implementation();
+	bool DestoryAllWeapon_Validate();
+	
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerReload();
+	void ServerReload_Implementation();
+	bool ServerReload_Validate();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerHook(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
+	void ServerHook_Implementation(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
+	bool ServerHook_Validate(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
 
 	UFUNCTION(Server, Reliable,WithValidation)
 		void ServerFireRifleWeapon(FVector CameraLocation,FRotator CameraRotation,bool IsMoving);

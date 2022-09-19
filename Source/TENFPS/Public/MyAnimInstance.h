@@ -22,6 +22,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
 		void AnimNotify_GrabWeaponLTemp(UAnimNotify* Notify);
 
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_HideClip(UAnimNotify* Notify);
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_unhideClip(UAnimNotify* Notify);
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_DropClip(UAnimNotify* Notify);
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_GetNewClip(UAnimNotify* Notify);
+
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_StartHookTrace(UAnimNotify* Notify);
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_EndHookTrace(UAnimNotify* Notify);
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class ACharacterBase* Owner;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -35,10 +49,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool IsCrouch;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float AimBaselineOffset;
+		FVector AimBaseLineOffset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FRotator AimBaseLineRotator;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		EWeaponType WeaponType;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FVector GripLOffset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		bool bLeftIK;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FVector MagOffset;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Speed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Direction;
 	UFUNCTION(BlueprintCallable)
 		void GetEssentialValue();
 	////UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)

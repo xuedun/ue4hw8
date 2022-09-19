@@ -15,18 +15,23 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "MyGameInstance.h"
+#include "MyGameModeBase.h"
+#include "MyAmmo.h"
+#include "MyProjectile.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 //////////////////////////////////////////////////////////////////////////
 // ACharacterBase
 
 ACharacterBase::ACharacterBase()
 {
 #pragma region Component
+	bIsPlaying = false;
+	bDead = false;
+	bCombatReady = false;
+	JumpMaxCount = 2;
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-
-	// set our turn rates for input
-	BaseTurnRate = 45.f;
-	BaseLookUpRate = 45.f;
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -54,25 +59,31 @@ ACharacterBase::ACharacterBase()
 	GetMesh()->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+	PlayerController = Cast<AMyPlayerController>(GetController());
+	
 #pragma endregion
 
 #pragma region Weapon
 	//EquipWeapons = { {TEXT("HosterBRSocket"),EWeaponType::TwoHandWeapon,nullptr},{TEXT("HosterBLSocket"),EWeaponType::TwoHandWeapon,nullptr} ,{TEXT("HosterThighRSocket"),EWeaponType::OneHandWeapon,nullptr} };
+	MaxWeaponNum = 3;
+
+	//初始化枪械栏位
 	FSWeaponPanelInfo temp = { TEXT("HosterBRSocket"),nullptr,EWeaponType::TwoHandWeapon};
 	EquipWeapons.Add(temp);
 	temp = { TEXT("HosterBLSocket"),nullptr,EWeaponType::TwoHandWeapon};
 	EquipWeapons.Add(temp);
 	temp = { TEXT("HosterThighRSocket"),nullptr,EWeaponType::OneHandWeapon};
 	EquipWeapons.Add(temp);
-	AimBaseLineOffset.Init(0, MaxWeaponNum);
+
+	
 	
 #pragma endregion
 }
 
+
 #pragma region InputComponent
 //////////////////////////////////////////////////////////////////////////
 // Input
-
 void ACharacterBase::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
@@ -80,24 +91,20 @@ void ACharacterBase::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-	PlayerInputComponent->BindAxis("MoveForward", this, &ACharacterBase::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &ACharacterBase::MoveRight);
-
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+
+	PlayerInputComponent->BindAxis("MoveForward", this, &ACharacterBase::MoveForward);
+	PlayerInputComponent->BindAxis("MoveRight", this, &ACharacterBase::MoveRight);
 
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ACharacterBase::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ACharacterBase::TouchStopped);
 
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ACharacterBase::OnResetVR);
-
-
 //	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ACharacterBase::Fire);
+	PlayerInputComponent->BindAction("StartGame", IE_Pressed, this, &ACharacterBase::StartGame);
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ACharacterBase::Reload);
+
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ACharacterBase::InputFirePressed);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ACharacterBase::InputFireReleased);
 
@@ -110,18 +117,6 @@ void ACharacterBase::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 	PlayerInputComponent->BindAction("ChangeToNextWeapon", IE_Pressed, this, &ACharacterBase::ChangeToNextWeapon);
 	PlayerInputComponent->BindAction("ChangeToLastWeapon", IE_Pressed, this, &ACharacterBase::ChangeToLastWeapon);
-
-}
-
-void ACharacterBase::OnResetVR()
-{
-	// If TENFPS is added to a project via 'Add Feature' in the Unreal Editor the dependency on HeadMountedDisplay in TENFPS.Build.cs is not automatically propagated
-	// and a linker error will result.
-	// You will need to either:
-	//		Add "HeadMountedDisplay" to [YourProject].Build.cs PublicDependencyModuleNames in order to build successfully (appropriate if supporting VR).
-	// or:
-	//		Comment or delete the call to ResetOrientationAndPosition below (appropriate if not supporting VR)
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
 }
 
 void ACharacterBase::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
@@ -132,22 +127,6 @@ void ACharacterBase::TouchStarted(ETouchIndex::Type FingerIndex, FVector Locatio
 void ACharacterBase::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 	StopJumping();
-}
-
-void ACharacterBase::TurnAtRate(float Rate)
-{
-//	Client_Yaw = Rate + Client_Yaw;
-	// calculate delta for this frame from the rate information
-	//AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
-	AddControllerYawInput(Rate);
-}
-
-void ACharacterBase::LookUpAtRate(float Rate)
-{
-//	Client_Pitch = Client_Pitch - Rate;
-	// calculate delta for this frame from the rate information
-	//AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
-	AddControllerPitchInput(Rate);
 }
 
 void ACharacterBase::MoveForward(float Value)
@@ -178,82 +157,33 @@ void ACharacterBase::MoveRight(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
-#pragma endregion
 
-#pragma region Engine
-void ACharacterBase::BeginPlay()
+void ACharacterBase::InputFirePressed()
 {
-	Super::BeginPlay();
-	Health = 100;
-	OnTakePointDamage.AddDynamic(this,&ACharacterBase::OnHit);
-	StartWithWeapon();
-
-	PlayerController = Cast<AMyPlayerController>(GetController());
-	PlayerController = Cast<AMyPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(),0));
-//	ClientCreateUI();
-//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Hellow"));
-//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, UKismetSystemLibrary::GetObjectName(GetController()));
-//	UKismetSystemLibrary::PrintString(GetWorld(),UKismetSystemLibrary::GetObjectName(PlayerController));
-	if (PlayerController)
+	switch (GetCurrentWeapon()->CurrentFireMode)
 	{
-		PlayerController->CreatePlayerUI();
+	case EFireMode::Semi_Auto:
+		FireWeaponPrimary();
+		break;
+	default:
+		FireWeaponPrimary();
 	}
 }
 
-void ACharacterBase::Tick(float DeltaTime)
+void ACharacterBase::InputFireReleased()
 {
-	Super::Tick(DeltaTime);
-	FRotator temp = GetBaseAimRotation() - K2_GetActorRotation();
-	
-//	if (!HasAuthority())
-	if(IsLocallyControlled())
+
+}
+
+void ACharacterBase::StartGame()
+{
+	if (bIsPlaying) return;
+	if (HasAuthority() && IsLocallyControlled())
 	{
-		Pitch = temp.Pitch > 270 ? temp.Pitch - 360 : temp.Pitch;
-		Yaw = temp.Yaw > 180 ? temp.Yaw - 360 : temp.Yaw;
-//		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::SanitizeFloat(Client_Pitch));
-//		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::SanitizeFloat(Client_Yaw));
-		ServerUpdataYP(Pitch, Yaw);
+//		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("GameStart")));
+		AMyGameModeBase* Gamemode = Cast<AMyGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+		Gamemode->GameModeStartGame();
 	}
-}
-#pragma endregion
-
-#pragma region Weapon
-void ACharacterBase::EquipWeapon(AWeaponBase* Weapon)
-{
-	//		for (auto& WeaponSlot : EquipWeapons)
-	for (int i = 0;i < MaxWeaponNum;i++)
-	{
-		FSWeaponPanelInfo& WeaponSlot = EquipWeapons[i];
-		if (!WeaponSlot.Weapon && WeaponSlot.WeaponType == Weapon->WeaponType)
-		{
-//			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Equip Weapon"));
-			WeaponSlot.Weapon = Weapon;
-			Weapon->K2_AttachToComponent(this->GetMesh(), WeaponSlot.SocketName, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
-			if(!bCombatReady) CurrentWeaponIndex = i;
-			Weapon->SetOwner(this);
-			break;
-		}
-	}
-}
-
-void ACharacterBase::GrabWeaponR()
-{
-	EquipWeapons[CurrentWeaponIndex].Weapon->K2_AttachToComponent(this->GetMesh(), TEXT("hand_rSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
-	bCombatReady = true;
-	CurrentWeaponType = EquipWeapons[CurrentWeaponIndex].WeaponType;
-}
-
-void ACharacterBase::OnHolster()
-{
-	EquipWeapons[CurrentWeaponIndex].Weapon->K2_AttachToComponent(this->GetMesh(), EquipWeapons[CurrentWeaponIndex].SocketName, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
-	bCombatReady = false;
-}
-
-void ACharacterBase::GrabWeaponLTemp()
-{
-//	EquipWeapons[CurrentWeaponIndex].Weapon->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lSocket"), EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
-	EquipWeapons[CurrentWeaponIndex].Weapon->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
-
 }
 
 void ACharacterBase::ADS()
@@ -271,16 +201,6 @@ void ACharacterBase::StopADS()
 	bUseControllerRotationYaw = false;
 	ChangeADSState(false);
 	return;
-}
-
-void ACharacterBase::EquipWeaponAnimation()
-{
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	CurrentWeaponIndex = TargetWeaponIndex;
-	AnimInstance->Montage_Play(EquipWeaponMontages[CurrentWeaponIndex]);
-	FOnMontageEnded MontageEndedDelegate;
-	MontageEndedDelegate.BindUFunction(this, TEXT("EndWeaponAnimation"));
-	AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, EquipWeaponMontages[TargetWeaponIndex]);
 }
 
 void ACharacterBase::WeaponR()
@@ -311,7 +231,7 @@ void ACharacterBase::ChangeToNextWeapon()
 {
 	if (ChangeWeaponLock) return;
 	ChangeWeaponLock = true;
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if(!AnimInstance) AnimInstance = GetMesh()->GetAnimInstance();
 	if (EquipWeapons[CurrentWeaponIndex].Weapon && !bCombatReady)
 	{
 		ServerChangeWeaponAnimation(CurrentWeaponIndex);
@@ -334,7 +254,7 @@ void ACharacterBase::ChangeToLastWeapon()
 {
 	if (ChangeWeaponLock) return;
 	ChangeWeaponLock = true;
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance) AnimInstance = GetMesh()->GetAnimInstance();
 	if (EquipWeapons[CurrentWeaponIndex].Weapon && !bCombatReady)
 	{
 		ServerChangeWeaponAnimation(CurrentWeaponIndex);
@@ -353,23 +273,80 @@ void ACharacterBase::ChangeToLastWeapon()
 	}
 }
 
-void ACharacterBase::EndWeaponAnimation()
+#pragma endregion
+
+#pragma region Engine
+void ACharacterBase::BeginPlay()
 {
-	CurrentWeaponIndex = TargetWeaponIndex;
-	ChangeWeaponLock = false;
-	ClientUpdateAmmoUI(EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo, EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo);
+	Super::BeginPlay();
+	Health = 100;
+//	OnTakePointDamage.AddDynamic(this,&ACharacterBase::OnHit);
+	StartWithWeapon();
+
+	PlayerController = Cast<AMyPlayerController>(GetController());
+	
+	if (PlayerController)
+	{
+		PlayerController->CreatePlayerUI();
+	}
+	else {
+		PlayerController = Cast<AMyPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+		if (PlayerController)
+		{
+			PlayerController->CreatePlayerUI();
+		}
+	}
+	AnimInstance = GetMesh()->GetAnimInstance();
 }
 
+void ACharacterBase::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	FRotator temp = GetBaseAimRotation() - K2_GetActorRotation();
+//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%i"),bCombatReady));
+//	if (!HasAuthority())
+	if(IsLocallyControlled())
+	{
+		Pitch = temp.Pitch > 270 ? temp.Pitch - 360 : temp.Pitch;
+		Yaw = temp.Yaw > 180 ? temp.Yaw - 360 : temp.Yaw;
+//		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::SanitizeFloat(Client_Pitch));
+//		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::SanitizeFloat(Client_Yaw));
+		ServerUpdataYP(Pitch, Yaw);
+	}
+	if (!AnimInstance) AnimInstance = GetMesh()->GetAnimInstance();
+	bLeftIK = bCombatReady && (AnimInstance->GetCurveValue("LeftHandIKOff") == 0);
+
+	if (!AnimInstance) AnimInstance = GetMesh()->GetAnimInstance();
+	Ani_Speed = GetVelocity().Size();
+	Ani_Direction = AnimInstance->CalculateDirection(GetVelocity(), GetActorRotation());
+//	UpdateLookAtPoint();
+}
+
+
+FVector ACharacterBase::UpdateLookAtPoint()
+{
+	FVector CameraLocation = GetFollowCamera()->GetComponentLocation();
+	TArray<AActor*> IgnoreArray;
+	FHitResult OutHit;
+	IgnoreArray.Add(this);
+	FVector EndLocation = CameraLocation + UKismetMathLibrary::GetForwardVector(GetControlRotation()) * 10000;
+	bool HitSucess = UKismetSystemLibrary::LineTraceSingle(GetWorld(), CameraLocation, EndLocation, ETraceTypeQuery::TraceTypeQuery1, false,
+		IgnoreArray, EDrawDebugTrace::None, OutHit, true);
+	LookAtPoint = HitSucess ? OutHit.Location : OutHit.TraceEnd;
+	return LookAtPoint;
+}
+
+#pragma endregion
+
+#pragma region Weapon
 void ACharacterBase::StartWithWeapon()
 {
 	
 	if (HasAuthority())
 	{
-	//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("B")));
 		PurchaseWeapon();
 		return;
 	}
-//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("A")));
 }
 
 void ACharacterBase::PurchaseWeapon()
@@ -381,33 +358,83 @@ void ACharacterBase::PurchaseWeapon()
 	AWeaponBase* Weapon = GetWorld()->SpawnActor<AWeaponBase>(BlueprintVar,
 		GetActorTransform(),
 		SpawnInfo);
-	//EquipWeapons[0].Weapon = Weapon;
-	//Weapon->EquipWeapon();
-	//EquipWeapon(Weapon);
+}
 
+void ACharacterBase::Reload()
+{
+	if ((!bCombatReady) || EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo <= 0) return;
+	ServerReload();
+}
+
+AWeaponBase* ACharacterBase::GetCurrentWeapon()
+{
+	if (bCombatReady) return EquipWeapons[CurrentWeaponIndex].Weapon;
+	else return nullptr;
+}
+
+void ACharacterBase::EquipWeapon(AWeaponBase* Weapon)
+{
+	//		for (auto& WeaponSlot : EquipWeapons)
+	for (int i = 0;i < MaxWeaponNum;i++)
+	{
+		FSWeaponPanelInfo& WeaponSlot = EquipWeapons[i];
+		if (!WeaponSlot.Weapon && WeaponSlot.WeaponType == Weapon->WeaponType)
+		{
+//			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Equip Weapon"));
+			WeaponSlot.Weapon = Weapon;
+			Weapon->K2_AttachToComponent(this->GetMesh(), WeaponSlot.SocketName, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+			if(!bCombatReady) CurrentWeaponIndex = i;
+			Weapon->SetOwner(this);
+			break;
+		}
+	}
 }
 
 #pragma endregion
 
 
 #pragma region Fire
+//待删除
 void ACharacterBase::Fire()
 {
 	if (EquipWeapons[CurrentWeaponIndex].Weapon && bCombatReady)
 	{
-		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (!AnimInstance) AnimInstance = GetMesh()->GetAnimInstance();
 		AnimInstance->Montage_Play(FireMontage);
 		EquipWeapons[CurrentWeaponIndex].Weapon->FireAnimation();
 		return;
 	}
 }
 
-void ACharacterBase::InputFirePressed()
+void ACharacterBase::FireWeaponPrimary()
 {
-	FireWeaponPrimary();
+	if (ChangeWeaponLock) return;
+	ChangeWeaponLock = true;
+	if (!bCombatReady) {
+	//未装备武器时默认近战攻击
+//		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ServerHook")));
+		ServerHook(GetFollowCamera()->GetComponentLocation(), GetFollowCamera()->GetComponentRotation(), false);
+		return;
+	}
+	else 
+	{
+		if (EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo <= 0)
+		{
+			Reload();
+		}
+	//服务器端多播开火特效，开火动画，计算子弹减少，更新弹夹UI，进行射线检测
+	//客户端准星扩散以及镜头抖动
+		if (EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo > 0)
+		{
+			ServerFireRifleWeapon(GetFollowCamera()->GetComponentLocation(), GetFollowCamera()->GetComponentRotation(), false);
+
+//			ClientFire();
+		}
+	}
+	ChangeWeaponLock = false;
 }
 
-void ACharacterBase::InputFireReleased()
+void ACharacterBase::StopFirePrimary()
 {
 
 }
@@ -419,24 +446,25 @@ void ACharacterBase::RifleLineTrace(FVector CameraLocation, FRotator CameraRotat
 	TArray<AActor*> IgnoreArray;
 	FHitResult OutHit;
 	IgnoreArray.Add(this);
-	if (IsMoving)
+	if (IsMoving) 
 	{
 
 	}
 	else
 	{
-		EndLocation = CameraLocation + CameraForwardVector * EquipWeapons[CurrentWeaponIndex].Weapon->BulletDistance;
+		if (bCombatReady) EndLocation = CameraLocation + CameraForwardVector * GetCurrentWeapon()->BulletDistance;
+		else EndLocation = CameraLocation + CameraForwardVector * HookDistance;
 	}
 	bool HitSucess = UKismetSystemLibrary::LineTraceSingle(GetWorld(), CameraLocation, EndLocation, ETraceTypeQuery::TraceTypeQuery1, false,
-		IgnoreArray, EDrawDebugTrace::None, OutHit, true);
+		IgnoreArray, EDrawDebugTrace::Persistent, OutHit, true);
 	if (HitSucess)
 	{
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit Actor Name : %s"), *OutHit.Actor->GetName()));
+//		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit Actor Name : %s"), *OutHit.Actor->GetName()));
 		ACharacterBase* HitCharacter = Cast<ACharacterBase>(OutHit.Actor);
 		if (HitCharacter)
 		{
 			//命中玩家
-			DamagePlayer(OutHit.PhysMaterial.Get(),OutHit.Actor.Get(), CameraForwardVector,OutHit);
+			if(bFrendHurt) DamagePlayer(OutHit.PhysMaterial.Get(),OutHit.Actor.Get(), CameraForwardVector,OutHit);
 		}
 		else
 		{
@@ -448,55 +476,111 @@ void ACharacterBase::RifleLineTrace(FVector CameraLocation, FRotator CameraRotat
 void ACharacterBase::DamagePlayer(UPhysicalMaterial* PhysicalMaterial, AActor* DamagedActor,FVector& HitFromDirection,FHitResult& HitInfo)
 {
 	float Damage;
+	float BaseDamage;
+	if (bCombatReady) BaseDamage = EquipWeapons[CurrentWeaponIndex].Weapon->BaseDamage;
+	else BaseDamage = HookBaseDamage;
 	switch (PhysicalMaterial->SurfaceType) 
 	{
 	case EPhysicalSurface::SurfaceType1:
 	{
-		Damage = EquipWeapons[CurrentWeaponIndex].Weapon->BaseDamage * 4;
+		Damage = BaseDamage * 4;
 	}
 	break;
 	case EPhysicalSurface::SurfaceType2:
 	{
-		Damage = EquipWeapons[CurrentWeaponIndex].Weapon->BaseDamage * 1;
+		Damage = BaseDamage * 1;
 	}
 	break;
 	case EPhysicalSurface::SurfaceType3:
 	{
-		Damage = EquipWeapons[CurrentWeaponIndex].Weapon->BaseDamage * 0.8;
+		Damage = BaseDamage * 0.8;
 	}
 	break;
 	case EPhysicalSurface::SurfaceType4:
 	{
-		Damage = EquipWeapons[CurrentWeaponIndex].Weapon->BaseDamage * 0.6;
+		Damage = BaseDamage * 0.6;
 	}
 	break;
 	}
 	UGameplayStatics::ApplyPointDamage(DamagedActor, Damage, HitFromDirection,HitInfo,GetController(),this,UDamageType::StaticClass());
-//	OnTakePointDamage.add
 }
 
+
+
+
+void ACharacterBase::SpawnBullet()
+{
+	FVector Start = GetCurrentWeapon()->WeaponMesh->GetSocketLocation(TEXT("Muzzle"));
+	FVector Velocity = (UpdateLookAtPoint() - Start);
+//	TArray<AActor*> IgnoreArray;
+//	FHitResult OutHit;
+//	IgnoreArray.Add(this);
+//	if (UKismetSystemLibrary::LineTraceSingle(GetWorld(), Start, Start + Velocity.GetSafeNormal()*100, ETraceTypeQuery::TraceTypeQuery1, false,
+//		IgnoreArray, EDrawDebugTrace::Persistent, OutHit, true))
+//	{
+//		DamagePlayer(OutHit.PhysMaterial.Get(), OutHit.Actor.Get(), Velocity, OutHit);
+//		return;
+//	}
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.Owner = GetCurrentWeapon();
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::DontSpawnIfColliding;
+
+	//子弹速度向量方向从枪口指向屏幕中心
+	
+	Velocity = (Yaw >= 90 || Yaw <= -90) ? GetCurrentWeapon()->WeaponMesh->GetSocketRotation(TEXT("Muzzle")).Vector() : Velocity;
+
+	Bullet = GetWorld()->SpawnActor<AMyProjectile>(GetCurrentWeapon()->Bullet,
+		GetCurrentWeapon()->WeaponMesh->GetSocketTransform(TEXT("Muzzle"), ERelativeTransformSpace::RTS_World),
+		SpawnInfo);
+	while (!Bullet)
+	{
+		Bullet = GetWorld()->SpawnActor<AMyProjectile>(GetCurrentWeapon()->Bullet,
+			GetCurrentWeapon()->WeaponMesh->GetSocketTransform(TEXT("Muzzle"), ERelativeTransformSpace::RTS_World),
+			SpawnInfo);
+	}
+	Bullet->ProjectileMovementComponent->Velocity = Velocity.GetSafeNormal() * GetCurrentWeapon()->BulletVelocity;
+	Bullet = nullptr;
+}
+
+#pragma endregion
+
+#pragma region Health
 void ACharacterBase::OnHit(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent, FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser)
 {
+//	if (!bIsPlaying) Damage = 0;
+//	if (InstigatedBy);
+	if (bDead) return;
 	Health -= Damage;
+	DamageCauser->Destroy();
 	ClientUpdateHealthUI(Health);
-	if (Health <= 0)
+	if (Health <= 0 && !bDead)
 	{
 		//死亡
+		bDead = true;
 		MulticastDieAnimation();
-		for (int i = 0;i < MaxWeaponNum;i++)
+		if (bIsPlaying)
 		{
-			if (EquipWeapons[i].Weapon)
-			{
-				EquipWeapons[i].Weapon->Destroy();
-			}
+			PVEDeath(InstigatedBy->GetPawn());
+			return;
 		}
-		PVPDeath(DamageCauser);
+		else
+		{
+			PVPDeath(InstigatedBy->GetPawn());
+			return;
+		}	
 	}
 //	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Health : %f"), Health));
 }
 
 void ACharacterBase::PVPDeath(AActor* DamageActor)
 {
+	for (int i = 0;i < MaxWeaponNum;i++)
+	{
+		if (EquipWeapons[i].Weapon)
+		{
+			EquipWeapons[i].Weapon->Destroy();
+		}
+	}
 	AMyPlayerController* DiePlayerController = Cast<AMyPlayerController>(GetController());
 //	UKismetSystemLibrary::PrintString(GetWorld(), UKismetSystemLibrary::GetObjectName(DiePlayerController));
 	if (DiePlayerController)
@@ -505,34 +589,146 @@ void ACharacterBase::PVPDeath(AActor* DamageActor)
 	}
 }
 
-void ACharacterBase::FireWeaponPrimary()
+void ACharacterBase::PVEDeath(AActor* DamageCauser)
 {
-	if (EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo <= 0) return;
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Fire"));
-	ServerFireRifleWeapon(GetFollowCamera()->GetComponentLocation(), GetFollowCamera()->GetComponentRotation(),false);
-	ClientFire();
+	for (int i = 0;i < MaxWeaponNum;i++)
+	{
+		if (EquipWeapons[i].Weapon)
+		{
+			EquipWeapons[i].Weapon->Destroy();
+		}
+	}
+	AMyPlayerController* DiePlayerController = Cast<AMyPlayerController>(GetController());
+	//	UKismetSystemLibrary::PrintString(GetWorld(), UKismetSystemLibrary::GetObjectName(DiePlayerController));
+	if (DiePlayerController)
+	{
+		DiePlayerController->PVEDeath();
+	}
 }
 
-void ACharacterBase::StopFirePrimary()
-{
 
+bool ACharacterBase::Is_Alive()
+{
+	return !bDead;
+}
+
+#pragma endregion
+#pragma region AnimationNotify
+void ACharacterBase::GrabWeaponR()
+{
+	EquipWeapons[CurrentWeaponIndex].Weapon->K2_AttachToComponent(this->GetMesh(), TEXT("hand_rSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+	CurrentWeaponType = EquipWeapons[CurrentWeaponIndex].WeaponType;
+	bCombatReady = true;
+	FTransform GripTransform = EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->GetSocketTransform(TEXT("GripL"), ERelativeTransformSpace::RTS_World);
+	GetMesh()->TransformToBoneSpace(TEXT("hand_r"), GripTransform.GetLocation(), FRotator::ZeroRotator, GripLOffset, GripLRotator);
+//	AimBaseLineOffset = UKismetAnimationLibrary::K2_DistanceBetweenTwoSocketsAndMapRange(EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh, (TEXT("Root"), ERelativeTransformSpace::RTS_World, TEXT("Sight"), ERelativeTransformSpace::RTS_World, false, 0, 0, 0, 0) - 13.5;
+	FTransform GripRTransform = EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->GetSocketTransform(TEXT("Sight"), ERelativeTransformSpace::RTS_World);
+	GetMesh()->TransformToBoneSpace(TEXT("hand_r"), GripRTransform.GetLocation(), FRotator::ZeroRotator, AimBaseLineOffset, AimBaseLineRotator);
+	FTransform MagTransform = EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->GetSocketTransform(TEXT("Mag"), ERelativeTransformSpace::RTS_World);
+	GetMesh()->TransformToBoneSpace(TEXT("hand_r"), MagTransform.GetLocation(), FRotator::ZeroRotator, MagOffset, MagRotator);
+
+}
+
+void ACharacterBase::OnHolster()
+{
+	bCombatReady = false;
+	EquipWeapons[CurrentWeaponIndex].Weapon->K2_AttachToComponent(this->GetMesh(), EquipWeapons[CurrentWeaponIndex].SocketName, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+}
+
+void ACharacterBase::GrabWeaponLTemp()
+{
+//	EquipWeapons[CurrentWeaponIndex].Weapon->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lSocket"), EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, EAttachmentRule::KeepWorld, true);
+	EquipWeapons[CurrentWeaponIndex].Weapon->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+}
+
+void ACharacterBase::HideClip()
+{
+	EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->HideBoneByName(TEXT("Magazine"), EPhysBodyOp::PBO_None);
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.Owner = this;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Ammo = GetWorld()->SpawnActor<AMyAmmo>(EquipWeapons[CurrentWeaponIndex].Weapon->Ammo,
+		GetMesh()->GetSocketTransform(TEXT("hand_lClipSocket"), ERelativeTransformSpace::RTS_World),
+		SpawnInfo);
+	Ammo->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lClipSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+}
+
+void ACharacterBase::UnhideClip()
+{
+	Ammo->K2_DestroyActor();
+	EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->UnHideBoneByName(TEXT("Magazine"));
+}
+
+void ACharacterBase::DropClip()
+{
+	Ammo->Mesh->K2_DetachFromComponent(EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld, true);
+	Ammo->Mesh->SetEnableGravity(true);
+	Ammo->Mesh->SetSimulatePhysics(true);
+}
+
+void ACharacterBase::GetNewClip()
+{
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.Owner = this;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	Ammo = GetWorld()->SpawnActor<AMyAmmo>(EquipWeapons[CurrentWeaponIndex].Weapon->Ammo,
+		GetMesh()->GetSocketTransform(TEXT("hand_lClipSocket"), ERelativeTransformSpace::RTS_World),
+		SpawnInfo);
+	Ammo->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lClipSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+}
+
+void ACharacterBase::StartHookTrace()
+{
+	StartLocation = GetMesh()->GetSocketLocation(TEXT("hand_r"));
+}
+
+void ACharacterBase::EndHookTrace()
+{
+	TArray<AActor*> IgnoreArray;
+	TArray<FHitResult> OutHit;
+	IgnoreArray.Add(this);
+	for (int i = 0;i < MaxWeaponNum;i++)
+	{
+		if (EquipWeapons[i].Weapon) IgnoreArray.Add(EquipWeapons[i].Weapon);
+	}
+	FVector EndLocation = GetMesh()->GetSocketLocation(TEXT("hand_r"));
+	UKismetSystemLibrary::SphereTraceMulti(GetWorld(), StartLocation, EndLocation,20, ETraceTypeQuery::TraceTypeQuery1, false,
+		IgnoreArray, EDrawDebugTrace::Persistent, OutHit, true);
+	ChangeWeaponLock = false;
+}
+
+void ACharacterBase::EquipWeaponAnimation()
+{
+	if (!AnimInstance) AnimInstance = GetMesh()->GetAnimInstance();
+	CurrentWeaponIndex = TargetWeaponIndex;
+	AnimInstance->Montage_Play(EquipWeaponMontages[CurrentWeaponIndex]);
+	FOnMontageEnded MontageEndedDelegate;
+	MontageEndedDelegate.BindUFunction(this, TEXT("EndWeaponAnimation"));
+	AnimInstance->Montage_SetEndDelegate(MontageEndedDelegate, EquipWeaponMontages[TargetWeaponIndex]);
+}
+
+void ACharacterBase::EndWeaponAnimation()
+{
+	CurrentWeaponIndex = TargetWeaponIndex;
+	ChangeWeaponLock = false;
+	ClientUpdateAmmoUI(EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo, EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo,!bCombatReady);
 }
 
 #pragma endregion
 
 #pragma region Network
+#pragma region Animation
 
-
+#pragma endregion
 void ACharacterBase::ClientFire_Implementation()
 {
 //	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::SanitizeFloat(Pitch));
+	//客户端准星扩散以及镜头抖动
 	if (true)
 	{
 		if (bCombatReady && EquipWeapons[CurrentWeaponIndex].Weapon)
 		{
 			EquipWeapons[CurrentWeaponIndex].Weapon->FireAnimation();
-//			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-//			AnimInstance->Montage_Play(FireMontage);
 			if (PlayerController)
 			{
 				PlayerController->PlayerCameraShake(EquipWeapons[CurrentWeaponIndex].Weapon->CameraShakeClass);
@@ -542,11 +738,11 @@ void ACharacterBase::ClientFire_Implementation()
 	}
 }
 
-void ACharacterBase::ClientUpdateAmmoUI_Implementation(int32 ClipCurrentAmmo, int32 GunCurrentAmmo)
+void ACharacterBase::ClientUpdateAmmoUI_Implementation(int32 ClipCurrentAmmo, int32 GunCurrentAmmo,bool HideAmmoUI)
 {
 	if (PlayerController)
 	{
-		PlayerController->UpdateAmmoUI(ClipCurrentAmmo, GunCurrentAmmo);
+		PlayerController->UpdateAmmoUI(ClipCurrentAmmo, GunCurrentAmmo,HideAmmoUI);
 	}
 }
 
@@ -558,16 +754,64 @@ void ACharacterBase::ClientUpdateHealthUI_Implementation(float NewHealth)
 	}
 }
 
+void ACharacterBase::DestoryAllWeapon_Implementation()
+{
+	for (int i = 0;i < MaxWeaponNum;i++)
+	{
+		if (EquipWeapons[i].Weapon)
+		{
+			EquipWeapons[i].Weapon->Destroy();
+		}
+	}
+}
+
+bool ACharacterBase::DestoryAllWeapon_Validate()
+{
+	return true;
+}
+
+void ACharacterBase::ServerReload_Implementation()
+{
+	MulticastPlayAnimation(ReloadMontage);
+	if (EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo + EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo > EquipWeapons[CurrentWeaponIndex].Weapon->MaxClipAmmo)
+	{
+		EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo = EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo + EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo - EquipWeapons[CurrentWeaponIndex].Weapon->MaxClipAmmo;
+		EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo = EquipWeapons[CurrentWeaponIndex].Weapon->MaxClipAmmo;
+	}
+	else
+	{
+		EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo += EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo;
+		EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo = 0;
+	}
+	ClientUpdateAmmoUI(EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo, EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo, !bCombatReady);
+
+}
+
+bool ACharacterBase::ServerReload_Validate()
+{
+	return true;
+}
+
+void ACharacterBase::ServerHook_Implementation(FVector CameraLocation, FRotator CameraRotation, bool IsMoving)
+{
+	MulticastPlayAnimation(HookMontage);
+//	RifleLineTrace(CameraLocation, CameraRotation, IsMoving);
+}
+
+bool ACharacterBase::ServerHook_Validate(FVector CameraLocation, FRotator CameraRotation, bool IsMoving)
+{
+	return true;
+}
+
 void ACharacterBase::ServerFireRifleWeapon_Implementation(FVector CameraLocation, FRotator CameraRotation, bool IsMoving)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Fire"));
+//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Fire"));
+	//服务器端多播开火特效，开火动画，计算子弹减少，更新弹夹UI，进行射线检测
 	EquipWeapons[CurrentWeaponIndex].Weapon->MultiShootingEffect();
-	EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo -= 1;
+	if(bIsPlaying) EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo -= 1;
 	MulticastPlayAnimation(FireMontage);
-	ClientUpdateAmmoUI(EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo, EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo);
-
-	RifleLineTrace(CameraLocation, CameraRotation, IsMoving);
-
+	ClientUpdateAmmoUI(EquipWeapons[CurrentWeaponIndex].Weapon->ClipCurrentAmmo, EquipWeapons[CurrentWeaponIndex].Weapon->GunCurrentAmmo,!bCombatReady);
+	if(bLineTraceFire) RifleLineTrace(CameraLocation, CameraRotation, IsMoving);
 }
 
 bool ACharacterBase::ServerFireRifleWeapon_Validate(FVector CameraLocation, FRotator CameraRotation, bool IsMoving)
@@ -599,8 +843,12 @@ bool ACharacterBase::ChangeADSState_Validate(bool bNextADS)
 
 void ACharacterBase::MulticastChangeWeaponAnimation_Implementation(int8 index)
 {
-	if (!EquipWeapons[index].Weapon) return;
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!EquipWeapons[index].Weapon)
+	{
+		ChangeWeaponLock = false;
+		return;
+	}
+	if (!AnimInstance) AnimInstance = GetMesh()->GetAnimInstance();
 	if (index == CurrentWeaponIndex && bCombatReady)
 	{
 		TargetWeaponIndex = index;
@@ -663,8 +911,9 @@ bool ACharacterBase::MulticastDieAnimation_Validate()
 
 void ACharacterBase::MulticastPlayAnimation_Implementation(class UAnimMontage* Montage)
 {
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (!AnimInstance) AnimInstance = GetMesh()->GetAnimInstance();
 	AnimInstance->Montage_Play(Montage);
+	if(Montage==FireMontage) SpawnBullet();
 }
 
 bool ACharacterBase::MulticastPlayAnimation_Validate(class UAnimMontage* Montage)
@@ -679,5 +928,6 @@ void ACharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ACharacterBase, Pitch);
 	DOREPLIFETIME(ACharacterBase, bADS);
 	DOREPLIFETIME(ACharacterBase, bCombatReady);
+	DOREPLIFETIME(ACharacterBase, bIsPlaying);
 }
 #pragma endregion

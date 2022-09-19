@@ -21,10 +21,12 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "PlayerUI")
 		void DoCrosshairRecoil();
 	UFUNCTION(BlueprintImplementableEvent, Category = "PlayerUI")
-		void UpdateAmmoUI(int32 ClipCurrentAmmo, int32 GunCurrentAmmo);
+		void UpdateAmmoUI(int32 ClipCurrentAmmo, int32 GunCurrentAmmo, bool bHideAmmoUI);
 	UFUNCTION(BlueprintImplementableEvent, Category = "PlayerUI")
 		void UpdateHealthUI(float NewHealth);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
 		void PVPDeath(AActor* DamageActor);
+	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
+		void PVEDeath();
 };

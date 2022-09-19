@@ -17,6 +17,13 @@ class TENFPS_API UEMyEnum : public UObject
 };
 
 UENUM(BlueprintType)
+enum class AIType : uint8
+{
+	AR,
+	Hook
+};
+
+UENUM(BlueprintType)
 enum class GaState : uint8
 {
 	Start,

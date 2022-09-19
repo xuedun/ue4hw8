@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "Components/SphereComponent.h"
 #include "EMyEnum.h"
+#include "MyAmmo.h"
+#include "MyProjectile.h"
 #include "WeaponBase.generated.h"
 
 UCLASS()
@@ -20,10 +22,20 @@ public:
 		class USphereComponent* SphereCollision;
 	UPROPERTY(EditAnywhere)
 		EWeaponType WeaponType;
+	UPROPERTY(EditAnywhere)
+		TArray<EFireMode> AvailableFireMode;
+		EFireMode CurrentFireMode;
+		int8 CurrentFireModeIndex;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UAnimMontage* WeaponFireMontage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<UCameraShakeBase> CameraShakeClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TSubclassOf<AMyAmmo> Ammo;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TSubclassOf<AMyProjectile> Bullet;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float BulletVelocity;
 	UFUNCTION()
 		void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent,
 			AActor* OtherActor,

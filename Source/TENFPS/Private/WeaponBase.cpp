@@ -24,7 +24,18 @@ AWeaponBase::AWeaponBase()
 	WeaponMesh->SetEnableGravity(true);
 	WeaponMesh->SetSimulatePhysics(true);
 
-	SetReplicates(true);
+	bReplicates = true;
+	if (AvailableFireMode.Num() > 0)
+	{
+		CurrentFireModeIndex = 0;
+		CurrentFireMode = AvailableFireMode[0];
+	}
+	else
+	{
+		AvailableFireMode.Add(EFireMode::Semi_Auto);
+		CurrentFireModeIndex = 0;
+		CurrentFireMode = AvailableFireMode[0];
+	}
 }
 
 
@@ -56,7 +67,7 @@ void AWeaponBase::EquipWeapon()
 void AWeaponBase::FireAnimation()
 {
 	UAnimInstance* AnimInstance = this->WeaponMesh->GetAnimInstance();
-	AnimInstance->Montage_Play(WeaponFireMontage);
+	if(AnimInstance && WeaponFireMontage) AnimInstance->Montage_Play(WeaponFireMontage);
 }
 
 // Called when the game starts or when spawned
