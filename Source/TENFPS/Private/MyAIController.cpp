@@ -16,51 +16,9 @@ AMyAIController::AMyAIController()
 {
 	BlackboardComponent = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComp"));
 	BehaviorTreeComponent = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BehaviorTreeComp"));
-
-	EnemyKeyID = 0;
 }
 
-void AMyAIController::FindTarget()
-{
-//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit Actor Name")));
-	if (Bot && Bot->Is_Alive())
-	{
-		ACharacterBase* Target = Cast<ACharacterBase>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit Actor Name : %s"), *Target->GetName()));
-		if (Target && Target->Is_Alive())
-		{
-			if (HasTarget(Target))
-			{
-				SetTarget(Target);
-			}
-		}
-	}
-}
-
-void AMyAIController::ShootEnemy()
-{
-
-}
-
-void AMyAIController::PVEDeath(AActor* DamageCauser)
-{
-	this->OnUnPossess();
-	GetPawn()->Destroy();
-}
-
-
-ACharacterBase* AMyAIController::GetTarget()
-{
-	if (BlackboardComponent)
-	{
-		return Cast<ACharacterBase>(BlackboardComponent->GetValue<UBlackboardKeyType_Object>(EnemyKeyID));
-	}
-	return nullptr;
-}
-
-
-
-bool AMyAIController::HasTarget(AActor* Target)
+bool AMyAIController::CanSeeTarget(AActor* Target)
 {
 	static FName Tag = FName(TEXT("HasTarget"));
 	FCollisionQueryParams Params(Tag, true, GetPawn());
@@ -86,12 +44,11 @@ bool AMyAIController::HasTarget(AActor* Target)
 	return false;
 }
 
-void AMyAIController::SetTarget(APawn* InPawn)
+ACharacterBase* AMyAIController::GetTarget()
 {
 	if (BlackboardComponent)
 	{
-		BlackboardComponent->SetValue<UBlackboardKeyType_Object>(EnemyKeyID, InPawn);
-		SetFocus(InPawn);
+		return Cast<ACharacterBase>(BlackboardComponent->GetValue<UBlackboardKeyType_Object>(TargetID));
 	}
+	return nullptr;
 }
-

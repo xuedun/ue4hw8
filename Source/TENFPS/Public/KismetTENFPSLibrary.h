@@ -15,18 +15,15 @@ struct FPlayerData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		FName PlayerName;
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 PlayerKillNum;
-	UPROPERTY(BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		int32 PlayerDieNum;
-	FPlayerData()
-	{
-		PlayerName = TEXT("");
-		PlayerDieNum = 0;
-		PlayerKillNum = 0;
-	}
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int32 PlayerHp;
+
 };
 
 UCLASS()

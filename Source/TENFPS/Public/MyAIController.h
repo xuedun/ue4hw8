@@ -17,26 +17,10 @@ class TENFPS_API AMyAIController : public AAIController
 
 public:
 	AMyAIController();
-
-	UFUNCTION(BlueprintCallable,Category=Behavior)
-		void FindTarget();
-
-	UFUNCTION(BlueprintCallable, Category = Behavior)
-		virtual void ShootEnemy();
-
-	UFUNCTION(BlueprintCallable)
-		virtual void PVEDeath(AActor* DamageCauser);
-	bool HasTarget(AActor* Target);
-	void SetTarget(APawn* InPawn);
-	ACharacterBase* GetTarget();
-	ACharacterBase* Bot;
-//	void DestoryPawn();
-//	FTimerHandle TimerHandle;
+	bool CanSeeTarget(AActor* Target);
+	virtual ACharacterBase* GetTarget();
+	int32 TargetID;
 protected:
-
-
 	UBlackboardComponent* BlackboardComponent;
 	UBehaviorTreeComponent* BehaviorTreeComponent;
-
-	int32 EnemyKeyID;
 };

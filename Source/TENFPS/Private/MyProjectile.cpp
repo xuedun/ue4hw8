@@ -7,6 +7,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "WeaponBase.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "CharacterBase.h"
 
 // Sets default values
@@ -21,35 +22,73 @@ AMyProjectile::AMyProjectile()
 	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Mesh->SetCollisionObjectType(ECollisionChannel::ECC_WorldStatic);
 
-	Mesh->OnComponentBeginOverlap.AddDynamic(this, &AMyProjectile::OnHit);
 	//ProjectileMovementComponent初始化
 	ProjectileMovementComponent->ProjectileGravityScale = 0.3;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
 	InitialLifeSpan = 3.0f;
 
-//	bReplicates = true;
-
+	bReplicates = true;
+//	Tags.Add(TEXT("Bullet"));
 }
 
 void AMyProjectile::OnHit( class UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit")));
+//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("ProHit")));
+	if (HasAuthority())
+	{
+		//投射物对于每个单位只造成一次伤害
+		if (IgnoreList.Contains(SweepResult.GetActor())) return;
+//		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit")));
+		if(SweepResult.PhysMaterial.Get())
+		{ 
+			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit")));
+			switch (SweepResult.PhysMaterial.Get()->SurfaceType)
+			{
+			case EPhysicalSurface::SurfaceType1:
+			{
+				Damage = Damage * 4;
+			}
+			break;
+			case EPhysicalSurface::SurfaceType2:
+			{
+				Damage = Damage * 1;
+			}
+			break;
+			case EPhysicalSurface::SurfaceType3:
+			{
+				Damage = Damage * 0.8;
+			}
+			break;
+			case EPhysicalSurface::SurfaceType4:
+			{
+				Damage = Damage * 0.6;
+			}
+			break;
+			}
+		}
 
-	UGameplayStatics::ApplyPointDamage(SweepResult.GetActor(), Weapon->BaseDamage, -1 * ProjectileMovementComponent->Velocity.GetSafeNormal(), SweepResult, Character->GetController(), this, UDamageType::StaticClass());
+		UGameplayStatics::ApplyPointDamage(SweepResult.GetActor(), Damage, -1 * ProjectileMovementComponent->Velocity.GetSafeNormal(), SweepResult, Cast<AController>(GetOwner()), this, UDamageType::StaticClass());
+		IgnoreList.Add(SweepResult.GetActor());
+		if(Cast<ACharacterBase>(SweepResult.GetActor()))
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), EmitterTemplate, SweepResult.Location, FRotator::ZeroRotator, FVector::OneVector, true, EPSCPoolMethod::None, true);
+	}
 //	this->Destroy();
+}
+
+bool AMyProjectile::HasSameGroupTag(AActor* A1, AActor* A2)
+{
+	return (A1->Tags.Contains(TEXT("Player")) && A2->Tags.Contains(TEXT("Player"))) || A1->Tags.Contains(TEXT("Attacker")) && A2->Tags.Contains(TEXT("Attacker"));
 }
 
 // Called when the game starts or when spawned
 void AMyProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-	Weapon = Cast<AWeaponBase>(GetOwner());
-	Character = Cast<ACharacterBase>(Weapon->GetOwner());
+//	Mesh->OnComponentBeginOverlap.AddDynamic(this, &AMyProjectile::OnHit);
 }
 
 // Called every frame
 void AMyProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }

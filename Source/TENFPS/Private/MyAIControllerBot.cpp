@@ -2,6 +2,7 @@
 
 
 #include "MyAIControllerBot.h"
+#include "MyAIControllerProtectee.h"
 #include "MyCharacterBot.h"
 #include "CharacterBase.h"
 #include "WeaponBase.h"
@@ -10,6 +11,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Object.h"
 #include "Kismet/GameplayStatics.h"
+#include "MyGameModeBase.h"
 #include "EMyEnum.h"
 
 AMyAIControllerBot::AMyAIControllerBot()
@@ -20,15 +22,16 @@ AMyAIControllerBot::AMyAIControllerBot()
 void AMyAIControllerBot::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
-	AMyCharacterBot* MyBot = Cast<AMyCharacterBot>(InPawn);
-	if (MyBot && MyBot->BotBehaviorTree)
+	AMyCharacterBot* Bot = Cast<AMyCharacterBot>(InPawn);
+	if (Bot && Bot->BotBehaviorTree)
 	{
-		if (MyBot->BotBehaviorTree->BlackboardAsset)
+		if (Bot->BotBehaviorTree->BlackboardAsset)
 		{
-			BlackboardComponent->InitializeBlackboard(*MyBot->BotBehaviorTree->BlackboardAsset);
+			BlackboardComponent->InitializeBlackboard(*Bot->BotBehaviorTree->BlackboardAsset);
 		}
-		EnemyKeyID = BlackboardComponent->GetKeyID("Enemy");
-		BehaviorTreeComponent->StartTree(*MyBot->BotBehaviorTree);
+		TargetID = BlackboardComponent->GetKeyID("Target");
+		ProID = BlackboardComponent->GetKeyID("Protectee");
+		BehaviorTreeComponent->StartTree(*Bot->BotBehaviorTree);
 	}
 }
 
@@ -38,27 +41,136 @@ void AMyAIControllerBot::OnUnPossess()
 	BehaviorTreeComponent->StopTree();
 }
 
-
-
-
-void AMyAIControllerBot::ShootEnemy()
+void AMyAIControllerBot::PVEDeath(AActor* DamageCauser)
 {
-	AMyCharacterBot* MyBot = Cast<AMyCharacterBot>(GetPawn());
-	if (MyBot && MyBot->Is_Alive())
+
+	GetPawn()->Destroy();
+}
+
+ACharacterBase* AMyAIControllerBot::GetTarget()
+{
+	if (BlackboardComponent)
 	{
-		bool bCanFire = false;
-		ACharacterBase* Enemy = GetTarget();
-		if (Enemy && Enemy->Is_Alive())
+		return Cast<ACharacterBase>(BlackboardComponent->GetValue<UBlackboardKeyType_Object>(TargetID));
+	}
+	return nullptr;
+}
+
+void AMyAIControllerBot::SetTarget(APawn* InPawn)
+{
+	if (BlackboardComponent)
+	{
+		BlackboardComponent->SetValue<UBlackboardKeyType_Object>(TargetID, InPawn);
+		SetFocus(InPawn);
+	}
+}
+
+//初始化锁定守护者作为目标
+void AMyAIControllerBot::Init()
+{
+	AMyCharacterBot* Bot = Cast<AMyCharacterBot>(GetPawn());
+	if (Bot && Bot->Is_Alive())
+	{
+		//初始化目标定位守护者
+		AMyGameModeBase* GameMode = Cast<AMyGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+		ACharacterBase* Target = nullptr;
+		if(GameMode->Protectee)
+			Target =Cast<ACharacterBase>( GameMode->Protectee->GetPawn());
+		else
 		{
-			if (LineOfSightTo(Enemy, MyBot->GetActorLocation()))
+			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("守护者未创建无法定位目标")));
+		}
+		if (Target)
+		{
+			if (BlackboardComponent)
 			{
-				AWeaponBase* Weapon = MyBot->GetCurrentWeapon();
-				if (MyBot->BotType != AIType::Hook && !Weapon)
+				BlackboardComponent->SetValue<UBlackboardKeyType_Object>(ProID, Target);
+			}
+			bProTarget = true;
+			SetTarget(Target);
+		}
+	}
+}
+
+void AMyAIControllerBot::DistanceDetect()
+{
+	if (ACharacterBase* Cha = GetTarget())
+	{
+		if (FVector::Distance(Cha->GetActorLocation(), GetPawn()->GetActorLocation()) > MaxTargetDistance)
+			Init();
+	}
+}
+
+//
+void AMyAIControllerBot::ShootEnemyBoss()
+{	
+//	UKismetSystemLibrary::PrintString(GetWorld(), UKismetSystemLibrary::GetObjectName(GetTarget()));
+	//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("bProTarget:%i"), bProTarget));
+	AMyCharacterBot* Bot = Cast<AMyCharacterBot>(GetPawn());
+	if (Bot && Bot->Is_Alive())
+	{
+		ACharacterBase* Target = GetTarget();
+		if (Target && Target->Is_Alive())
+		{
+			SetFocus(Target);
+			if (LineOfSightTo(Target, Bot->GetActorLocation()))
+			{
+				float dis = FVector::Distance(Target->GetActorLocation(), Bot->GetActorLocation());
+				if (dis < 100)
 				{
-					MyBot->ChangeToNextWeapon();
+					Bot->ThreeHookHit();
 				}
-				MyBot->InputFirePressed();
+				else
+				{
+					Bot->HadokenAttack();
+				}
+			}
+		}
+		else
+		{
+			if (BlackboardComponent)
+			{
+				Target = Cast<ACharacterBase>(BlackboardComponent->GetValue<UBlackboardKeyType_Object>(ProID));
+				SetTarget(Target);
+				bProTarget = true;
 			}
 		}
 	}
 }
+
+//在拥有目标且能看到目标的时候进行攻击
+void AMyAIControllerBot::ShootEnemy()
+{
+//	UKismetSystemLibrary::PrintString(GetWorld(), UKismetSystemLibrary::GetObjectName(GetTarget()));
+//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("bProTarget:%i"), bProTarget));
+	AMyCharacterBot* Bot = Cast<AMyCharacterBot>(GetPawn());
+	if (Bot && Bot->Is_Alive())
+	{
+		ACharacterBase* Target = GetTarget();
+		if (Target && Target->Is_Alive())
+		{
+			if (LineOfSightTo(Target, Bot->GetActorLocation()))
+			{
+
+				AWeaponBase* Weapon = Bot->GetCurrentWeapon();
+				if (Bot->BotType != AIType::Hook && !Weapon)
+				{
+					Bot->ChangeToNextWeapon();
+				}
+				Bot->InputFirePressed();
+				Bot->InputFireReleased();
+			}
+		}
+		else
+		{
+			if (BlackboardComponent)
+			{
+				Target = Cast<ACharacterBase>(BlackboardComponent->GetValue<UBlackboardKeyType_Object>(ProID));
+				SetTarget(Target);
+				bProTarget = true;
+			}
+		}
+	}
+}
+
+

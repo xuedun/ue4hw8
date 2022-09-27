@@ -35,6 +35,16 @@ public:
 		void AnimNotify_StartHookTrace(UAnimNotify* Notify);
 	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
 		void AnimNotify_EndHookTrace(UAnimNotify* Notify);
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_StartHookLTrace(UAnimNotify* Notify);
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_EndHookLTrace(UAnimNotify* Notify);
+
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_AmmoCheck(UAnimNotify* Notify);
+
+	UFUNCTION(BlueprintCallable, Category = "AnimNotify")
+		void AnimNotify_Hadoken(UAnimNotify* Notify);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class ACharacterBase* Owner;
@@ -54,6 +64,8 @@ public:
 		FRotator AimBaseLineRotator;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		EWeaponType WeaponType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		EGripRType GripRType;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		FVector GripLOffset;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

@@ -18,6 +18,30 @@ AMyGameModeBase::AMyGameModeBase()
 	BotPawnClass = BotPawn.Class;
 	static ConstructorHelpers::FClassFinder<ACharacterBase> ProtecteePawn(TEXT("/Game/Blueprint/Protectee/BP_CharacterProtectee"));
 	ProtecteePawnClass = ProtecteePawn.Class;
+
+	BuffMap.Add(EBuffType::Bullet, 0);
+	BuffMap.Add(EBuffType::Attack, 0);
+	BuffMap.Add(EBuffType::Health, 0);
+	BuffMap.Add(EBuffType::Defence, 0);
+	BuffMap.Add(EBuffType::RPM, 0);
+}
+
+void AMyGameModeBase::BotDeath(AMyAIControllerBot* AIC, AController* DamageCauser,FVector loc, FRotator rot)
+{
+	FreeAMyAIControllerArray.Add(AIC);
+	CurrentAINum -= 1;
+	UpdatePVEKill(DamageCauser);
+
+	int8 BonusListIndex = FMath::RandHelper(BonusList.Num()-1);
+	auto& ite = BonusList[BonusListIndex];
+	GetWorld()->SpawnActor(ite,&loc,&rot);
+
+	SurEnemy--;
+	if (SurEnemy == 0 && EnemyReserve == 0)
+	{
+		DownTimeOut();
+	}
+	UpdateEnemyUI();
 }
 
 void AMyGameModeBase::StartPlay()
@@ -35,6 +59,42 @@ UClass* AMyGameModeBase::GetDefaultPawnClassForController_Implementation(AContro
 	}
 
 	return Super::GetDefaultPawnClassForController_Implementation(InController);
+}
+
+void AMyGameModeBase::GetBuff(EBuffType Buff, float BuffTime, AActor* BuffActor)
+{
+	if (bGameStart) BuffActor->Destroy();
+	BuffMap[Buff] = BuffTime;
+	for (AMyPlayerController* Controller : AICs)
+	{
+		Controller->GetBuff(Buff, BuffTime);
+		Cast<ACharacterBase>(Controller->GetPawn())->MulticastBuff(Buff,true);
+	}
+
+}
+
+
+
+void AMyGameModeBase::UpdateBuffTime()
+{
+	for (auto& i : BuffMap)
+	{
+		if (i.Value == 1)
+		{
+			i.Value = 0;
+			for (AMyPlayerController* Controller : AICs)
+			{
+				Cast<ACharacterBase>(Controller->GetPawn())->MulticastBuff(i.Key, false);
+				Controller->EndBuff(i.Key);
+			}
+		}
+		i.Value = i.Value == 0 ? 0 : i.Value - 1;
+		
+	}
+	for (AMyPlayerController* Controller : AICs)
+	{
+		Controller->UpdateBuffUI();
+	}
 }
 
 AMyAIControllerBot* AMyGameModeBase::CreateAIController()
@@ -62,12 +122,34 @@ void AMyGameModeBase::CreateABot()
 	SpawnInfo.Owner = AIC;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	UClass* BlueprintVar = StaticLoadClass(AMyCharacterBot::StaticClass(), nullptr, TEXT("Blueprint'/Game/Blueprint/Bot/BP_CharacterBot.BP_CharacterBot_C'"));
-	int8 RespawnIndex = FMath::RandRange(0, AIPlayerStarts.Num() - 1);
+	int8 RespawnIndex = CurrentAIIndex++;
+	CurrentAIIndex = CurrentAIIndex >= AIPlayerStarts.Num() ? 0 : CurrentAIIndex;
 	AMyCharacterBot* Bot = GetWorld()->SpawnActor<AMyCharacterBot>(BlueprintVar,
 		AIPlayerStarts[RespawnIndex]->GetActorTransform(),
 		SpawnInfo);
 	AIC->Possess(Bot);
-	AIC->Bot = Bot;
+	CurrentAINum += 1;
+	EnemyReserve--;
+	SurEnemy++;
+
+}
+
+void AMyGameModeBase::CreateABoss()
+{
+	AMyAIControllerBot* AIC;
+	AIC = CreateAIController();
+	AllAMyAIControllerArray.Add(AIC);
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.Owner = AIC;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	UClass* BlueprintVar = StaticLoadClass(AMyCharacterBot::StaticClass(), nullptr, TEXT("Blueprint'/Game/Blueprint/Bot/BP_CharacterBoss.BP_CharacterBoss_C'"));
+	int8 RespawnIndex = CurrentAIIndex++;
+	CurrentAIIndex = CurrentAIIndex >= AIPlayerStarts.Num() ? 0 : CurrentAIIndex;
+	AMyCharacterBot* Bot = GetWorld()->SpawnActor<AMyCharacterBot>(BlueprintVar,
+		AIPlayerStarts[RespawnIndex]->GetActorTransform(),
+		SpawnInfo);
+	AIC->Possess(Bot);
+	bHasBoss = true;
 }
 
 void AMyGameModeBase::CreateProtectee()
@@ -94,7 +176,6 @@ void AMyGameModeBase::CreateProtectee()
 		ProtecteeStarts[RespawnIndex]->GetActorTransform(),
 		SpawnInfo);
 	Protectee->Possess(Bot);
-	Protectee->Bot = Bot;
 }
 
 #pragma region ProtecteeAI

@@ -28,7 +28,7 @@ void AMyAIControllerProtectee::OnPossess(APawn* InPawn)
 		{
 			BlackboardComponent->InitializeBlackboard(*MyBot->BotBehaviorTree->BlackboardAsset);
 		}
-		EnemyKeyID = BlackboardComponent->GetKeyID("Enemy");
+		EnemyKeyID = BlackboardComponent->GetKeyID("Target");
 		BehaviorTreeComponent->StartTree(*MyBot->BotBehaviorTree);
 	}
 }
@@ -41,17 +41,18 @@ void AMyAIControllerProtectee::OnUnPossess()
 
 void AMyAIControllerProtectee::FindTarget()
 {
-	if (Bot && Bot->Is_Alive())
-	{
-		ACharacterBase* Target = Cast<ACharacterBase>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
-		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit Actor Name : %s"), *Target->GetName()));
-		if (Target && Target->Is_Alive())
-		{
-			if (HasTarget(Target))
+	AMyCharacterProtectee* Bot = Cast<AMyCharacterProtectee>(GetPawn());
+ 	if (Bot && Bot->Is_Alive())
+ 	{
+ 		ACharacterBase* Target = Cast<ACharacterBase>(UGameplayStatics::GetPlayerPawn(GetWorld(), 0));
+//		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("FindTarget Name : %s"), *Target->GetName()));
+ 		if (Target && Target->Is_Alive())
+ 		{
+			if (CanSeeTarget(Target))
 			{
-				SetTarget(Target);
-			}
-		}
+ 				SetTarget(Target);
+ 			}
+ 		}
 	}
 // 	for (auto PIC : AICs)
 // 	{
@@ -63,5 +64,23 @@ void AMyAIControllerProtectee::FindTarget()
 // 			break;
 // 		}
 // 	}
+}
+
+void AMyAIControllerProtectee::SetTarget(APawn* InPawn)
+{
+	if (BlackboardComponent)
+	{
+		BlackboardComponent->SetValue<UBlackboardKeyType_Object>(EnemyKeyID, InPawn);
+		SetFocus(InPawn);
+	}
+}
+
+ACharacterBase* AMyAIControllerProtectee::GetTarget()
+{
+	if (BlackboardComponent)
+	{
+		return Cast<ACharacterBase>(BlackboardComponent->GetValue<UBlackboardKeyType_Object>(EnemyKeyID));
+	}
+	return nullptr;
 }
 

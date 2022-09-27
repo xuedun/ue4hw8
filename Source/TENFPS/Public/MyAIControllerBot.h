@@ -19,5 +19,21 @@ public:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
 
-	void ShootEnemy();
+	int32 ProID;//守护者目标
+	bool bProTarget = true;
+	UFUNCTION(BlueprintCallable, Category = Behavior)
+		void ShootEnemy();
+	UFUNCTION(BlueprintCallable, Category = Behavior)
+		void ShootEnemyBoss();
+	UFUNCTION(BlueprintCallable)
+		void PVEDeath(AActor* DamageCauser);
+
+	void SetTarget(APawn* InPawn);
+	ACharacterBase* GetTarget();
+	UPROPERTY(EditAnywhere)
+		float MaxTargetDistance = 1000;
+	UFUNCTION(BlueprintCallable)
+		void Init();
+	UFUNCTION(BlueprintCallable)
+		void DistanceDetect();
 };

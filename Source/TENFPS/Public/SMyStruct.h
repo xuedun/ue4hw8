@@ -22,3 +22,16 @@ public:
 		EWeaponType WeaponType;
 };
 
+USTRUCT(BlueprintType)
+struct FSBuffInfo
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class ACharacterBase* Character;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		EBuffType BuffType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float BuffTime;
+};
+

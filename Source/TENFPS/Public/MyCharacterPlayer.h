@@ -16,5 +16,5 @@ class TENFPS_API AMyCharacterPlayer : public ACharacterBase
 	virtual void FireWeaponPrimary();
 protected:
 	virtual void BeginPlay() override;
-
+	virtual void Tick(float DeltaTime) override;
 };

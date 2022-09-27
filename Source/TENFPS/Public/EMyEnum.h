@@ -17,6 +17,31 @@ class TENFPS_API UEMyEnum : public UObject
 };
 
 UENUM(BlueprintType)
+enum class EBulletType : uint8
+{
+	AR,
+	ShotGun,
+	Pistol
+};
+
+UENUM(BlueprintType)
+enum class EBuffType : uint8
+{
+	Bullet,
+	Attack,
+	Health,
+	Defence,
+	RPM
+};
+
+UENUM(BlueprintType)
+enum class EGripRType : uint8
+{
+	Standard,
+	ShotGun
+};
+
+UENUM(BlueprintType)
 enum class AIType : uint8
 {
 	AR,

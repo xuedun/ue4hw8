@@ -53,12 +53,43 @@ void UMyAnimInstance::AnimNotify_EndHookTrace(UAnimNotify* Notify)
 	Owner->EndHookTrace();
 }
 
+void UMyAnimInstance::AnimNotify_StartHookLTrace(UAnimNotify* Notify)
+{
+	Owner->StartHookLTrace();
+}
+
+void UMyAnimInstance::AnimNotify_EndHookLTrace(UAnimNotify* Notify)
+{
+	Owner->EndHookLTrace();
+}
+
+void UMyAnimInstance::AnimNotify_AmmoCheck(UAnimNotify* Notify)
+{
+	Owner->AmmoCheck();
+}
+
+void UMyAnimInstance::AnimNotify_Hadoken(UAnimNotify* Notify)
+{
+	Owner->Hadoken();
+}
+
 void UMyAnimInstance::GetEssentialValue()
 {
 	bADS = Owner->bADS;
 	bCombatReady = Owner->bCombatReady;
-	Pitch = Owner->Pitch;
-	Yaw = Owner->Yaw;
+
+	if (Owner->Pitch > 180)
+		Pitch = Owner->Pitch - 360;
+	else if (Owner->Pitch < -180)
+		Pitch = Owner->Pitch + 360;
+	else Pitch = Owner->Pitch;
+
+	if (Owner->Yaw > 180)
+		Yaw = Owner->Yaw - 360;
+	else if(Owner->Yaw < -180)
+		Yaw = Owner->Yaw + 360;
+	else Yaw = Owner->Yaw;
+
 	WeaponType = Owner->CurrentWeaponType;
 	GripLOffset = Owner->GripLOffset;
 	AimBaseLineOffset = Owner->AimBaseLineOffset;
@@ -67,6 +98,7 @@ void UMyAnimInstance::GetEssentialValue()
 	MagOffset = Owner->MagOffset;
 	Speed = Owner->Ani_Speed;
 	Direction = Owner->Ani_Direction;
+	GripRType = Owner->CurrentGripRType;
 //	bLeftIK = Owner->bCombatReady;
 //	AimBaselineOffset = Owner->AimBaseLineOffset[Owner->CurrentWeaponIndex];
 }

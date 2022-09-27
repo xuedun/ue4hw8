@@ -22,10 +22,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = Behavior)
 		UBehaviorTree* BotBehaviorTree;
 	UPROPERTY(EditAnywhere)
-	AIType BotType;
+		AIType BotType;
+	UPROPERTY(EditAnywhere)
+		float MaxBossHealth = 2000;
+	bool bHasPoisonous = false;
 	void OnHit(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent, FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser);
 
-	virtual void PVEDeath(AActor* DamageCauser);
+	virtual void PVEDeath(AController* DamageCauser);
 protected:
 	virtual void BeginPlay() override;
 };

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "EMyEnum.h"
 #include "MyPlayerController.generated.h"
 
 /**
@@ -15,6 +17,10 @@ class TENFPS_API AMyPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	class ACharacterBase* Chara;
+	UFUNCTION(BlueprintCallable)
+	void UpdateDotDamage();
 	void PlayerCameraShake(TSubclassOf<UCameraShakeBase> CameraShake);
 	UFUNCTION(BlueprintImplementableEvent,Category="PlayerUI")
 		void CreatePlayerUI();
@@ -29,4 +35,16 @@ public:
 		void PVPDeath(AActor* DamageActor);
 	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
 		void PVEDeath();
+	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
+		void RespawnDownTime();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
+		void UpdateBuffUI();
+	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
+		void GetBuff(EBuffType Buff, float BuffTime);
+	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
+		void EndBuff(EBuffType Buff);
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void UpdateWeaponUI(int32 WeaponIndex, FName FireMode);
 };

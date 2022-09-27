@@ -19,8 +19,11 @@ public:
 
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnUnPossess() override;
-
-	void FindTarget();
+	void SetTarget(APawn* InPawn);
+	ACharacterBase* GetTarget();
+	UFUNCTION(BlueprintCallable, Category = Behavior)
+		void FindTarget();
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<AMyPlayerController*> AICs ;
+	int32 EnemyKeyID;
 };

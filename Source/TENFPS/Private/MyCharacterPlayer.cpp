@@ -2,7 +2,9 @@
 
 
 #include "MyCharacterPlayer.h"
+#include "Kismet/GameplayStatics.h"
 #include "WeaponBase.h"
+#include "MyPlayerController.h"
 void AMyCharacterPlayer::FireWeaponPrimary()
 {
 	Super::FireWeaponPrimary();
@@ -21,4 +23,33 @@ void AMyCharacterPlayer::BeginPlay()
 {
 	Super::BeginPlay();
 	OnTakePointDamage.AddDynamic(this, &ACharacterBase::OnHit);
+	OnTakeAnyDamage.AddDynamic(this, &ACharacterBase::OnHitAny);
+	PlayerController = Cast<AMyPlayerController>(GetController());
+
+	if (PlayerController)
+	{
+		if (IsLocallyControlled())
+		{
+//			UKismetSystemLibrary::PrintString(GetWorld(), TEXT("TREras1"));
+			PlayerController->CreatePlayerUI();
+		}
+	}
+ 	else 
+ 	{
+ 		if (HasAuthority())
+ 		{
+// 			UKismetSystemLibrary::PrintString(GetWorld(), TEXT("TREras2"));
+ 			PlayerController = Cast<AMyPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+ 			if (PlayerController)
+ 			{
+ 				PlayerController->CreatePlayerUI();
+			}
+ 		}
+ 	}
+	if (bStartWithWeapon) StartWithWeapon();//初始是否自带武器
+}
+
+void AMyCharacterPlayer::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
 }
