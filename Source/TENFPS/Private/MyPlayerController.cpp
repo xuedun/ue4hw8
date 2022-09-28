@@ -10,7 +10,7 @@ void AMyPlayerController::UpdateDotDamage()
 {
 	if (!Chara) Chara = Cast<ACharacterBase>(GetPawn());
 //	UGameplayStatics::ApplyDamage(Chara, Chara->DamagePerSec, nullptr, nullptr, UMyDamageType_Dot::StaticClass());
-	UGameplayStatics::ApplyDamage(Chara, 5, nullptr, nullptr, UMyDamageType_Dot::StaticClass());
+	UGameplayStatics::ApplyDamage(Chara, 10, nullptr, nullptr, UMyDamageType_Dot::StaticClass());
 }
 
 void AMyPlayerController::PlayerCameraShake(TSubclassOf<UCameraShakeBase> CameraShake)

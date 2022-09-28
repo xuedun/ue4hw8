@@ -37,7 +37,7 @@ void AMyGameModeBase::BotDeath(AMyAIControllerBot* AIC, AController* DamageCause
 	GetWorld()->SpawnActor(ite,&loc,&rot);
 
 	SurEnemy--;
-	if (SurEnemy == 0 && EnemyReserve == 0)
+	if (SurEnemy == 0 && EnemyReserve == 0 &&!bHasBoss)
 	{
 		DownTimeOut();
 	}

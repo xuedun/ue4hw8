@@ -657,11 +657,14 @@ void ACharacterBase::OnHit(AActor* DamagedActor, float Damage, class AController
 
 void ACharacterBase::OnHitAny(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
-	if (!Cast<UMyDamageType_Dot>(DamageType)) return;
-//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("CharacterBaseOnhit")));
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("dotdotdot")));
+	if (InstigatedBy || DamageCauser) return;
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("dot")));
 	if (bDead) return;
 	Health -= DamagePerSec;
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%f"),Health));
 	if (BuffMap[EBuffType::Health]) Health += 10;
+	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%f"), Health));
 	Health = Health > 100 ? 100 : Health;
 	//伤害来自子弹则销毁子弹
 	ClientUpdateHealthUI(Health);
