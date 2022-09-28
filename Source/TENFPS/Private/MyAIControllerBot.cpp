@@ -10,6 +10,7 @@
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/Blackboard/BlackboardKeyType_Object.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType_Bool.h"
 #include "Kismet/GameplayStatics.h"
 #include "MyGameModeBase.h"
 #include "EMyEnum.h"
@@ -31,6 +32,7 @@ void AMyAIControllerBot::OnPossess(APawn* InPawn)
 		}
 		TargetID = BlackboardComponent->GetKeyID("Target");
 		ProID = BlackboardComponent->GetKeyID("Protectee");
+		HurtID = BlackboardComponent->GetKeyID("BeHurt");
 		BehaviorTreeComponent->StartTree(*Bot->BotBehaviorTree);
 	}
 }
@@ -45,6 +47,23 @@ void AMyAIControllerBot::PVEDeath(AActor* DamageCauser)
 {
 
 	GetPawn()->Destroy();
+}
+
+bool AMyAIControllerBot::IsHurt()
+{
+	if (BlackboardComponent)
+	{
+		return BlackboardComponent->GetValue<UBlackboardKeyType_Bool>(HurtID);
+	}
+	return false;
+}
+
+void AMyAIControllerBot::BeHurt(bool InBool)
+{
+	if (BlackboardComponent)
+	{
+		BlackboardComponent->SetValue<UBlackboardKeyType_Bool>(HurtID, InBool);
+	}
 }
 
 ACharacterBase* AMyAIControllerBot::GetTarget()

@@ -20,6 +20,7 @@ public:
 	virtual void OnUnPossess() override;
 
 	int32 ProID;//守护者目标
+	int32 HurtID;
 	bool bProTarget = true;
 	UFUNCTION(BlueprintCallable, Category = Behavior)
 		void ShootEnemy();
@@ -27,7 +28,8 @@ public:
 		void ShootEnemyBoss();
 	UFUNCTION(BlueprintCallable)
 		void PVEDeath(AActor* DamageCauser);
-
+	bool IsHurt();
+	void BeHurt(bool InBool);
 	void SetTarget(APawn* InPawn);
 	ACharacterBase* GetTarget();
 	UPROPERTY(EditAnywhere)

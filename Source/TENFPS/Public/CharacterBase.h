@@ -92,7 +92,7 @@ public:
 
 	UPROPERTY(Replicated)
 		bool bADS = false;
-	UPROPERTY(Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite ,Replicated)
 		bool bCombatReady = false;
 
 	bool ReloadLock = false;
@@ -129,6 +129,7 @@ public:
 		class UAnimMontage* OneHandADSFireMontage;
 
 	void EquipWeapon(AWeaponBase* Weapon);
+	UFUNCTION(BlueprintCallable)
 	AWeaponBase* GetCurrentWeapon();
 #pragma endregion
 
@@ -380,4 +381,11 @@ public:
 	void MulticastThrowWeapon_Implementation();
 	bool MulticastThrowWeapon_Validate();
 
+// 狙击枪开镜
+	UPROPERTY(EditAnywhere)
+		float FieldOfAimingView;
+	UPROPERTY()
+		UUserWidget* WidgetScope;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<UUserWidget> SniperScopeBPClass;
 };

@@ -8,7 +8,7 @@ public class TENFPS : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay" ,"PhysicsCore","OnlineSubsystem", "OnlineSubsystemUtils" ,"GameplayTasks", "NavigationSystem" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay" ,"PhysicsCore","OnlineSubsystem", "OnlineSubsystemUtils" ,"GameplayTasks", "NavigationSystem","UMG"});
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
             {

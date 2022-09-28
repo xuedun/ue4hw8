@@ -21,7 +21,8 @@ enum class EBulletType : uint8
 {
 	AR,
 	ShotGun,
-	Pistol
+	Pistol,
+	Snaper
 };
 
 UENUM(BlueprintType)

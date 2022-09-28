@@ -35,7 +35,7 @@ public:
 		void PVPDeath(AActor* DamageActor);
 	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
 		void PVEDeath();
-	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable, Category = "Health")
 		void RespawnDownTime();
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Health")

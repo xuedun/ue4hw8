@@ -46,6 +46,7 @@ void AMyCharacterBot::OnHit(AActor* DamagedActor, float Damage, class AControlle
 			{
 	//			UKismetSystemLibrary::PrintString(GetWorld(), UKismetSystemLibrary::GetObjectName(InstigatedBy->GetPawn()));
 				AIC->SetTarget(InstigatedBy->GetPawn());
+				AIC->BeHurt(true);
 				AIC->bProTarget = false;
 			}
 		}

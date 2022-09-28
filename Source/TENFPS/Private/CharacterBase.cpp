@@ -24,7 +24,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "MyDamageType_Dot.h"
-
+#include "Blueprint/UserWidget.h"
 //////////////////////////////////////////////////////////////////////////
 // ACharacterBase
 
@@ -83,9 +83,10 @@ ACharacterBase::ACharacterBase()
 	BuffMap.Add(EBuffType::Defence, false);
 	BuffMap.Add(EBuffType::RPM, false);
 
-	BulletNum.Add(EBulletType::AR, 0);
-	BulletNum.Add(EBulletType::ShotGun, 0);
-	BulletNum.Add(EBulletType::Pistol, 0);
+	BulletNum.Add(EBulletType::AR, 60);
+	BulletNum.Add(EBulletType::ShotGun, 30);
+	BulletNum.Add(EBulletType::Pistol, 30);
+	BulletNum.Add(EBulletType::Snaper, 30);
 }
 
 
@@ -232,7 +233,7 @@ void ACharacterBase::StartGame()
 	if (HasAuthority() && IsLocallyControlled())
 	{
 		AMyGameModeBase* Gamemode = Cast<AMyGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
-		Gamemode->GameModeStartGame(20,5,3);
+		Gamemode->GameModeStartGame(20,5,3,5);
 	}
 }
 
@@ -369,17 +370,51 @@ void ACharacterBase::ADS()
 	CameraBoom->SocketOffset.X = CameraBoom->SocketOffset.X + 100;
 //	CameraBoom->SocketOffset = CameraBoom->SocketOffset + CameraBoom->GetForwardVector() * 100;
 	ServerChangeADSState(true);
+	if (GetCurrentWeapon()->WeaponIndex == 4)
+	{
+		this->SetActorHiddenInGame(true);
+		for (auto WeaponSlot : EquipWeapons)
+		{
+			if (WeaponSlot.Weapon)
+			{
+				WeaponSlot.Weapon->SetActorHiddenInGame(true);
+			}
+		}
+		if(GetFollowCamera())
+			GetFollowCamera()->SetFieldOfView(FieldOfAimingView);
+		WidgetScope = CreateWidget<UUserWidget>(GetWorld(), SniperScopeBPClass);
+		if(WidgetScope)
+			WidgetScope->AddToViewport();
+
+
+	}
 	return;
 }
 
 void ACharacterBase::StopADS()
 {
 	if (!bCombatReady) return;
+	if (!bADS) return;
 	bADS = false;
 	bUseControllerRotationYaw = false;
 	CameraBoom->SocketOffset.X = CameraBoom->SocketOffset.X - 100;
 //	CameraBoom->SocketOffset = CameraBoom->SocketOffset - CameraBoom->GetForwardVector() * 100;
 	ServerChangeADSState(false);
+	if (GetCurrentWeapon()->WeaponIndex == 4)
+	{
+		this->SetActorHiddenInGame(false);
+		for (auto WeaponSlot : EquipWeapons)
+		{
+			if (WeaponSlot.Weapon)
+			{
+				WeaponSlot.Weapon->SetActorHiddenInGame(false);
+			}
+		}
+		if (GetFollowCamera())
+			GetFollowCamera()->SetFieldOfView(90);
+		if (WidgetScope)
+			WidgetScope->RemoveFromParent();
+	}
 	return;
 }
 
@@ -546,7 +581,15 @@ void ACharacterBase::SpawnBulletLocal()
 		for (int i = 0;i < GetCurrentWeapon()->PelletPerShot;i++)
 		{
 			float Angle = PI / (0.5f) * FMath::FRand();
-			float Displacement = FMath::Tan(PI / (180.f) * GetCurrentWeapon()->MaxSpreadAngle) * GetCurrentWeapon()->BulletDistance * FMath::FRand();
+			float Displacement;
+			if (bADS)
+			{
+				if(GetCurrentWeapon()->WeaponIndex == 4)
+					Displacement = FMath::Tan(PI / (180.f) * 0) * GetCurrentWeapon()->BulletDistance * FMath::FRand();
+				if (GetCurrentWeapon()->WeaponIndex == 2)
+					Displacement = FMath::Tan(PI / (180.f) * GetCurrentWeapon()->MaxSpreadAngle/2) * GetCurrentWeapon()->BulletDistance * FMath::FRand();
+			}	
+			else Displacement = FMath::Tan(PI / (180.f) * GetCurrentWeapon()->MaxSpreadAngle) * GetCurrentWeapon()->BulletDistance * FMath::FRand();
 			float X = Displacement * FMath::Cos(Angle);
 			float Y = Displacement * FMath::Sin(Angle);
 			SpreadVelocity = Velocity.ToOrientationRotator().Vector()* GetCurrentWeapon()->BulletDistance +
@@ -558,8 +601,11 @@ void ACharacterBase::SpawnBulletLocal()
 			IgnoreArray.Add(this);
 //			bool HitSucess = UKismetSystemLibrary::LineTraceSingle(GetWorld(), Start, EndLocation, ETraceTypeQuery::TraceTypeQuery1, false,
 //				IgnoreArray, EDrawDebugTrace::Persistent, OutHit, true);
+
 			ServerSpawnBullet(GetCurrentWeapon()->Bullet, SpawnTransForm, SpreadVelocity);
 		}
+		if (bADS && (GetCurrentWeapon()->WeaponIndex == 4 || GetCurrentWeapon()->WeaponIndex == 2))
+			StopADS();
 	}
 }
 
@@ -665,6 +711,8 @@ void ACharacterBase::PVEDeath(AActor* DamageCauser)
 			EquipWeapons[i].Weapon->Destroy();
 		}
 	}
+	//if(Cast<AMyGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()))->RespawnNum == 0)
+//		Cast<AMyGameModeBase>(UGameplayStatics::GetGameMode(GetWorld()))->EndGame();
 	AMyPlayerController* DiePlayerController = Cast<AMyPlayerController>(GetController());
 	//	UKismetSystemLibrary::PrintString(GetWorld(), UKismetSystemLibrary::GetObjectName(DiePlayerController));
 	if (DiePlayerController)
@@ -672,7 +720,7 @@ void ACharacterBase::PVEDeath(AActor* DamageCauser)
 		
 		DiePlayerController->PVEDeath();
 	}
-	ClientRespawn();
+//	ClientRespawn();
 }
 
 
@@ -712,29 +760,42 @@ void ACharacterBase::GrabWeaponLTemp()
 
 void ACharacterBase::HideClip()
 {
-	EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->HideBoneByName(TEXT("Magazine"), EPhysBodyOp::PBO_None);
+	if(GetCurrentWeapon()->WeaponIndex==1)
+		EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->HideBoneByName(TEXT("Magazine"), EPhysBodyOp::PBO_None);
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.Owner = this;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Ammo = GetWorld()->SpawnActor<AMyAmmo>(EquipWeapons[CurrentWeaponIndex].Weapon->Ammo,
-		GetMesh()->GetSocketTransform(TEXT("hand_lClipSocket"), ERelativeTransformSpace::RTS_World),
-		SpawnInfo);
-	Ammo->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lClipSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+	if (EquipWeapons[CurrentWeaponIndex].Weapon->Ammo)
+	{
+		Ammo = GetWorld()->SpawnActor<AMyAmmo>(EquipWeapons[CurrentWeaponIndex].Weapon->Ammo,
+			GetMesh()->GetSocketTransform(TEXT("hand_lClipSocket"), ERelativeTransformSpace::RTS_World),
+			SpawnInfo);
+		Ammo->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lClipSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+	}
 }
 
 void ACharacterBase::UnhideClip()
 {
-	if(Ammo!=nullptr) Ammo->K2_DestroyActor();
-	EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->UnHideBoneByName(TEXT("Magazine"));
+	if (Ammo != nullptr)
+	{
+		Ammo->K2_DestroyActor();
+		Ammo = nullptr;
+	}
+	if(GetCurrentWeapon()->WeaponIndex==1)
+		GetCurrentWeapon()->WeaponMesh->UnHideBoneByName(TEXT("Magazine"));
 	ClientUpdateAmmoUI(GetCurrentWeapon()->ClipCurrentAmmo, BulletNum[GetCurrentWeapon()->BulletType], !bCombatReady);
 	ReloadLock = false;
 }
 
 void ACharacterBase::DropClip()
 {
-	Ammo->Mesh->K2_DetachFromComponent(EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld, true);
-	Ammo->Mesh->SetEnableGravity(true);
-	Ammo->Mesh->SetSimulatePhysics(true);
+	if (Ammo)
+	{
+		Ammo->Mesh->K2_DetachFromComponent(EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld, EDetachmentRule::KeepWorld, true);
+		Ammo->Mesh->SetEnableGravity(true);
+		Ammo->Mesh->SetSimulatePhysics(true);
+		Ammo = nullptr;
+	}
 }
 
 void ACharacterBase::GetNewClip()
@@ -742,10 +803,14 @@ void ACharacterBase::GetNewClip()
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.Owner = this;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	Ammo = GetWorld()->SpawnActor<AMyAmmo>(EquipWeapons[CurrentWeaponIndex].Weapon->Ammo,
-		GetMesh()->GetSocketTransform(TEXT("hand_lClipSocket"), ERelativeTransformSpace::RTS_World),
-		SpawnInfo);
-	Ammo->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lClipSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+	if (EquipWeapons[CurrentWeaponIndex].Weapon->Ammo)
+	{
+		Ammo = GetWorld()->SpawnActor<AMyAmmo>(EquipWeapons[CurrentWeaponIndex].Weapon->Ammo,
+			GetMesh()->GetSocketTransform(TEXT("hand_lClipSocket"), ERelativeTransformSpace::RTS_World),
+			SpawnInfo);
+		Ammo->K2_AttachToComponent(this->GetMesh(), TEXT("hand_lClipSocket"), EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, EAttachmentRule::SnapToTarget, true);
+	}
+
 }
 
 void ACharacterBase::StartHookTrace()
@@ -1102,8 +1167,9 @@ void ACharacterBase::ServerFireRifleWeapon_Implementation(FVector CameraLocation
 //	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Fire"));
 	//服务器端多播开火特效，开火动画，计算子弹减少，更新弹夹UI，进行射线检测
 //	EquipWeapons[CurrentWeaponIndex].Weapon->MultiShootingEffect();
-	if(!BuffMap[EBuffType::Bullet])
-		GetCurrentWeapon()->ClipCurrentAmmo -= 1;
+	if(!Tags.Contains(TEXT("Bot")))
+		if (!BuffMap[EBuffType::Bullet])
+			GetCurrentWeapon()->ClipCurrentAmmo -= 1;
 	if (CurrentWeaponType == EWeaponType::OneHandWeapon)
 	{
 		if(bADS) MulticastPlayAnimation(OneHandADSFireMontage);

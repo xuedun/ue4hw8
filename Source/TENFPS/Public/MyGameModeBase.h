@@ -20,8 +20,8 @@ class TENFPS_API AMyGameModeBase : public AGameModeBase
 public:
 	AMyGameModeBase();
 	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable)
-		void GameModeStartGame(int InEnemyNumPerMin,int InMaxAINum, int InMinPerBoss);
-	UFUNCTION(BlueprintImplementableEvent)
+		void GameModeStartGame(int InEnemyNumPerMin,int InMaxAINum, int InMinPerBoss, int InRespawnNum);
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable)
 		void EndGame();
 	UFUNCTION(BlueprintImplementableEvent)
 		void UpdatePVEKill(AController* DamageCauser);
@@ -71,6 +71,8 @@ public:
 		int MinNum = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		bool bGameStart = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int RespawnNum = 10;
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void DownTimeOut();
 

@@ -72,7 +72,7 @@ public:
 		float BaseDamage;
 	UPROPERTY(EditAnywhere)
 		int8 PelletPerShot = 1;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,BlueprintReadOnly)
 		float MaxSpreadAngle = 5;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

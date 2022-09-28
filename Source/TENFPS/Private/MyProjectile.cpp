@@ -41,7 +41,7 @@ void AMyProjectile::OnHit( class UPrimitiveComponent* OverlappedComponent, AActo
 //		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit")));
 		if(SweepResult.PhysMaterial.Get())
 		{ 
-			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit")));
+//			UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("Hit")));
 			switch (SweepResult.PhysMaterial.Get()->SurfaceType)
 			{
 			case EPhysicalSurface::SurfaceType1:
