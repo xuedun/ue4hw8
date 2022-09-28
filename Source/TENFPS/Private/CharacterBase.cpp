@@ -760,8 +760,9 @@ void ACharacterBase::GrabWeaponLTemp()
 
 void ACharacterBase::HideClip()
 {
-	if(GetCurrentWeapon()->WeaponIndex==1)
-		EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->HideBoneByName(TEXT("Magazine"), EPhysBodyOp::PBO_None);
+	if (GetCurrentWeapon())
+		if(GetCurrentWeapon()->WeaponIndex==1)
+			EquipWeapons[CurrentWeaponIndex].Weapon->WeaponMesh->HideBoneByName(TEXT("Magazine"), EPhysBodyOp::PBO_None);
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.Owner = this;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -781,8 +782,9 @@ void ACharacterBase::UnhideClip()
 		Ammo->K2_DestroyActor();
 		Ammo = nullptr;
 	}
-	if(GetCurrentWeapon()->WeaponIndex==1)
-		GetCurrentWeapon()->WeaponMesh->UnHideBoneByName(TEXT("Magazine"));
+	if(GetCurrentWeapon())
+		if(GetCurrentWeapon()->WeaponIndex==1)
+			GetCurrentWeapon()->WeaponMesh->UnHideBoneByName(TEXT("Magazine"));
 	ClientUpdateAmmoUI(GetCurrentWeapon()->ClipCurrentAmmo, BulletNum[GetCurrentWeapon()->BulletType], !bCombatReady);
 	ReloadLock = false;
 }
@@ -1187,6 +1189,7 @@ bool ACharacterBase::ServerFireRifleWeapon_Validate(FVector CameraLocation, FRot
 
 void ACharacterBase::ServerChangeWeaponAnimation_Implementation(int8 index)
 {
+//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("111")));
 	MulticastChangeWeaponAnimation(index);
 }
 
