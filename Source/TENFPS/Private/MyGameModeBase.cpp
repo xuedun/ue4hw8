@@ -8,12 +8,15 @@
 #include "Kismet/GameplayStatics.h"
 #include "MyAIControllerProtectee.h"
 #include "MyAIControllerBot.h"
+#include "MyPlayerState.h"
 AMyGameModeBase::AMyGameModeBase()
 {
 	static ConstructorHelpers::FClassFinder<ACharacterBase> PlayerPawnOb(TEXT("/Game/Blueprint/BP_CharacterBase"));
 	DefaultPawnClass = PlayerPawnOb.Class;
 	PlayerControllerClass = AMyPlayerController::StaticClass();
-	
+
+//	static ConstructorHelpers::FClassFinder<ACharacterBase> PlayerPawn(TEXT("Blueprint'/Game/Blueprint/BP_CharacterBase.BP_CharacterBase_C'"));
+//	PlayerPawnClass = PlayerPawn.Class;
 	static ConstructorHelpers::FClassFinder<ACharacterBase> BotPawn(TEXT("Blueprint'/Game/Blueprint/Bot/BP_CharacterBot.BP_CharacterBot_C'"));
 	BotPawnClass = BotPawn.Class;
 	static ConstructorHelpers::FClassFinder<ACharacterBase> ProtecteePawn(TEXT("/Game/Blueprint/Protectee/BP_CharacterProtectee"));
@@ -42,13 +45,6 @@ void AMyGameModeBase::BotDeath(AMyAIControllerBot* AIC, AController* DamageCause
 		DownTimeOut();
 	}
 	UpdateEnemyUI();
-}
-
-void AMyGameModeBase::StartPlay()
-{
-	Super::StartPlay();
-	UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("AIStart"), AIPlayerStarts);
-	UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("ProtecteePoint"), ProtecteePlayerStarts);
 }
 
 UClass* AMyGameModeBase::GetDefaultPawnClassForController_Implementation(AController* InController)
@@ -178,7 +174,29 @@ void AMyGameModeBase::CreateProtectee()
 	Protectee->Possess(Bot);
 }
 
-#pragma region ProtecteeAI
 
+void AMyGameModeBase::StartPlay()
+{
+	Super::StartPlay();
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("AIStart"), AIPlayerStarts);
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("ProtecteePoint"), ProtecteePlayerStarts);
+}
 
-#pragma endregion
+void AMyGameModeBase::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+	if(HasAuthority())
+		UGameplayStatics::GetAllActorsWithTag(GetWorld(), TEXT("PlayerStart"), PlayerStarts);
+	AMyPlayerController* PC = Cast<AMyPlayerController>(NewPlayer);
+	PlayerControllerArray.Add(PC);
+
+// 	AMyPlayerState* PS = Cast<AMyPlayerState>(NewPlayer->PlayerState);
+// 	PlayerStateArray.Add(PS);
+// 	PS->Name = FText::FromString(GetNameSafe(PC));
+
+	FLatentActionInfo LatentInfo;
+	UKismetSystemLibrary::Delay(GetWorld(), 0.5, LatentInfo);
+	PC->SpawnPlayerCharacte(PlayerPawnClass, PlayerStarts[SpawnIndex]->GetTransform());
+	SpawnIndex = ++SpawnIndex >= PlayerStarts.Num() ? 0 : SpawnIndex;
+
+}

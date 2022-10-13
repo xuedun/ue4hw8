@@ -19,6 +19,13 @@ void AMyCharacterPlayer::FireWeaponPrimary()
 	}
 }
 
+void AMyCharacterPlayer::ClientCreateUI_Implementation()
+{
+//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("BeginPlay")));
+	PlayerController = Cast<AMyPlayerController>(GetController());
+	if(PlayerController) PlayerController->CreatePlayerUI();
+}
+
 void AMyCharacterPlayer::BeginPlay()
 {
 	Super::BeginPlay();
@@ -26,27 +33,12 @@ void AMyCharacterPlayer::BeginPlay()
 	OnTakeAnyDamage.AddDynamic(this, &ACharacterBase::OnHitAny);
 	PlayerController = Cast<AMyPlayerController>(GetController());
 
-	if (PlayerController)
-	{
-		if (IsLocallyControlled())
-		{
-//			UKismetSystemLibrary::PrintString(GetWorld(), TEXT("TREras1"));
-			PlayerController->CreatePlayerUI();
-		}
-	}
- 	else 
- 	{
- 		if (HasAuthority())
- 		{
-// 			UKismetSystemLibrary::PrintString(GetWorld(), TEXT("TREras2"));
- 			PlayerController = Cast<AMyPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
- 			if (PlayerController)
- 			{
- 				PlayerController->CreatePlayerUI();
-			}
- 		}
- 	}
+	if (PlayerController) PlayerController->CreatePlayerUI();
+	
+//	ClientCreateUI();
+
 	if (bStartWithWeapon) StartWithWeapon();//初始是否自带武器
+//	if (bStartWithWeapon) StartWithWeapon();//初始是否自带武器
 }
 
 void AMyCharacterPlayer::Tick(float DeltaTime)

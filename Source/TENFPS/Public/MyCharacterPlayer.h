@@ -14,6 +14,8 @@ class TENFPS_API AMyCharacterPlayer : public ACharacterBase
 {
 	GENERATED_BODY()
 	virtual void FireWeaponPrimary();
+	UFUNCTION(Client, Reliable)
+		void ClientCreateUI();
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;

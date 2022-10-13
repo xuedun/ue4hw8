@@ -34,4 +34,3 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float BuffTime;
 };
-

@@ -17,13 +17,13 @@ class TENFPS_API AMyPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	AMyPlayerController();
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	class ACharacterBase* Chara;
 	UFUNCTION(BlueprintCallable)
 	void UpdateDotDamage();
 	void PlayerCameraShake(TSubclassOf<UCameraShakeBase> CameraShake);
-	UFUNCTION(BlueprintImplementableEvent,Category="PlayerUI")
-		void CreatePlayerUI();
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "PlayerUI")
 		void DoCrosshairRecoil();
 	UFUNCTION(BlueprintImplementableEvent, Category = "PlayerUI")
@@ -33,7 +33,7 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
 		void PVPDeath(AActor* DamageActor);
-	UFUNCTION(BlueprintImplementableEvent, Category = "Health")
+	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable, Category = "Health")
 		void PVEDeath();
 	UFUNCTION(BlueprintImplementableEvent,BlueprintCallable, Category = "Health")
 		void RespawnDownTime();
@@ -47,4 +47,18 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void UpdateWeaponUI(int32 WeaponIndex, FName FireMode);
+
+#pragma region UI
+	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+		UUserWidget* PlayerUI;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TSubclassOf<UUserWidget> PlayerUIClass ;
+	UFUNCTION()
+		void CreatePlayerUI();
+#pragma endregion
+
+#pragma region Respawn
+	class AMyCharacterPlayer* PlayerCharacter;
+	void SpawnPlayerCharacte(UClass* Class, FTransform SpawnTransform);
+#pragma endregion
 };

@@ -39,16 +39,6 @@ public:
 
 #pragma region InputComponent
 public:
-	FVector LookAtPoint;
-	FVector UpdateLookAtPoint();
-	float Pitch;
-	float Yaw;
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
-		bool bIsPlaying;
-	float Ani_Direction;
-	float Ani_Speed;
-
-public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
@@ -56,50 +46,31 @@ public:
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 
-	void InputFirePressed();
-	void InputFireReleased();
-
-	void WeaponR();
-	void WeaponL();
-	void WeaponT();
-	void ChangeToLastWeapon();
-	void ChangeToNextWeapon();
-
-	void Reload();
-
-	void ChangeFireMode();
-	void ADS();
-	void StopADS();	
-	
-	void StartGame();
-
 	void SpeedUp();
 	void StopSpeedUp();
 #pragma endregion
 
 #pragma region Weapon
-public:
 	int8 MaxWeaponNum;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<FSWeaponPanelInfo> EquipWeapons;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bStartWithWeapon;
+		bool bStartWithWeapon;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<TSubclassOf<AWeaponBase>> StartWeaponList;
 	void StartWithWeapon();
 	void PurchaseWeapon(UClass* Class);
+	void EquipWeapon(AWeaponBase* Weapon);
 
-	UPROPERTY(Replicated)
-		bool bADS = false;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite ,Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 		bool bCombatReady = false;
-
-	bool ReloadLock = false;
-	bool ChangeWeaponLock = false;
+	UFUNCTION(BlueprintCallable)
+		AWeaponBase* GetCurrentWeapon();
 
 	int8 CurrentWeaponIndex;
 	int8 TargetWeaponIndex;
+
 	EWeaponType CurrentWeaponType;
 	EGripRType CurrentGripRType;
 
@@ -111,143 +82,22 @@ public:
 	FRotator AimBaseLineRotator;
 	bool bLeftIK;
 
-	class AMyAmmo* Ammo;
-
-//蒙太奇在蓝图中设置
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		TArray<class UAnimMontage*> EquipWeaponMontages;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		TArray<class UAnimMontage*> HolsterWeaponMontages;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UAnimMontage* ReloadMontage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UAnimMontage* HookMontage;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UAnimMontage* OneHandHipFireMontage;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UAnimMontage* OneHandADSFireMontage;
-
-	void EquipWeapon(AWeaponBase* Weapon);
-	UFUNCTION(BlueprintCallable)
-	AWeaponBase* GetCurrentWeapon();
-#pragma endregion
-
-#pragma region Fire
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		bool bLineTraceFire = false;
-
-	class AMyProjectile* Bullet;
-	bool isFiring = false;
-	UPROPERTY(EditAnywhere)
-	bool FireLock = false;
-	int BurstNum = 0;
-
-	virtual void FireWeaponPrimary();
-	void SpawnBulletLocal();
-
-	//射线检测对应的检测和伤害计算
-	void RifleLineTrace(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
-	void DamagePlayer(UPhysicalMaterial* PhysicalMaterial,AActor* DamagedActor, FVector& HitFromDirection, FHitResult& HitInfo);
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float HookDistance;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float HookBaseDamage;
+	void ChangeFireMode();
 
 #pragma endregion
 
-#pragma region Health
-	float Health;
-	bool bDead = false;
-	//受伤
-	UFUNCTION()
-		virtual void OnHit(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent, FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser);
-	UFUNCTION()
-		virtual void OnHitAny(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
-	
-	//死亡
-	UFUNCTION(BlueprintCallable)
-		void PVPDeath(AActor* DamageActor);
-	UFUNCTION(BlueprintCallable)
-		virtual void PVEDeath(AActor* DamageCauser);
-public:
-	bool Is_Alive();
-#pragma endregion
+#pragma region Base
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite)
+		bool bIsPlaying;
 
+	FVector LookAtPoint;
+	FVector UpdateLookAtPoint();
 
-#pragma region AnimationNotify
-public:
-	void GrabWeaponR();
-	void OnHolster();
-	void GrabWeaponLTemp();
+	float Ani_Speed;
+	float Ani_Direction;
 
-	void HideClip();
-	void UnhideClip();
-	void DropClip();
-	void GetNewClip();
-
-	void StartHookTrace();
-	void EndHookTrace();
-	void StartHookLTrace();
-	void EndHookLTrace();
-
-	void AmmoCheck();
-
-	FVector StartLocation;
-	UFUNCTION(BlueprintCallable)
-		void EquipWeaponAnimation();
-	UFUNCTION(BlueprintCallable)
-		void EndWeaponAnimation(class UAnimMontage* LastMontage);
-	UFUNCTION(BlueprintCallable)
-		void SingleAnimationAfterReload();
-	bool AnimLock;
-#pragma endregion
-
-
-#pragma region Network
-#pragma region Animation
-
-#pragma endregion
-	UFUNCTION(Client, Reliable)
-		void ClientFire();
-
-	UFUNCTION(Client, Reliable)
-		void ClientRecoil();
-
-	UFUNCTION(Client, Reliable)
-		void ClientUpdateAmmoUI(int32 ClipCurrentAmmo,int32 GunCurrentAmmo, bool HideAmmoUI);
-
-	UFUNCTION(Client, Reliable)
-		void ClientWeaponUI();
-
-	UFUNCTION(Client, Reliable)
-		void ClientUpdateHealthUI(float NewHealth);
-
-	UFUNCTION(Client, Reliable)
-		void ClientRespawn();
-
-	UFUNCTION(Server, Reliable, WithValidation,BlueprintCallable)
-		void DestoryAllWeapon();
-	void DestoryAllWeapon_Implementation();
-	bool DestoryAllWeapon_Validate();
-	
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerSpawnBullet(UClass* Class, FTransform SpawnTransForm,FVector Velocity);
-	void ServerSpawnBullet_Implementation(UClass* Class, FTransform SpawnTransForm, FVector Velocity);
-	bool ServerSpawnBullet_Validate(UClass* Class, FTransform SpawnTransForm, FVector Velocity);
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerReload();
-	void ServerReload_Implementation();
-	bool ServerReload_Validate();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerChangeADSState(bool bNextADS);
-	void ServerChangeADSState_Implementation(bool bNextADS);
-	bool ServerChangeADSState_Validate(bool bNextADS);
-
+	float Pitch;
+	float Yaw;
 	UFUNCTION(Server, Unreliable, WithValidation)
 		void ServerUpdataYP(float P, float Y);
 	void ServerUpdataYP_Implementation(float P, float Y);
@@ -258,46 +108,181 @@ public:
 	void MulticastUpdataYP_Implementation(float P, float Y);
 	bool MulticastUpdataYP_Validate(float P, float Y);
 
+#pragma endregion
+
+#pragma region ADS
+	UPROPERTY(Replicated)
+		bool bADS = false;
+	void ADS();
+	void StopADS();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerChangeADSState(bool bNextADS);
+	void ServerChangeADSState_Implementation(bool bNextADS);
+	bool ServerChangeADSState_Validate(bool bNextADS);
+
+	// 狙击枪开镜
+	UPROPERTY(EditAnywhere)
+		float FieldOfAimingView;
+	UPROPERTY()
+		UUserWidget* WidgetScope;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<UUserWidget> SniperScopeBPClass;
+
+
+#pragma endregion
+
+
+#pragma region Health
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float Health = 100;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float DamagePerSec = 0;
+
+	bool bDead = false;
+	//受伤
+	UFUNCTION()
+		virtual void OnHit(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent, FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser);
+	UFUNCTION()
+		virtual void OnHitAny(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
+	//死亡
+	void ServerDeath(class AController* InstigatedBy);
+
+	bool Is_Alive();
+	UFUNCTION(Client, Reliable)
+		void ClientUpdateHealthUI(float NewHealth);
+	//多播死亡动画
 	UFUNCTION(NetMulticast, Reliable, WithValidation)
 		void MulticastDieAnimation();
 	void MulticastDieAnimation_Implementation();
 	bool MulticastDieAnimation_Validate();
+
+	UFUNCTION(Client, Reliable)
+		void ClientRespawn();
+
+	UFUNCTION(Server, Reliable, WithValidation, BlueprintCallable)
+		void DestoryAllWeapon();
+	void DestoryAllWeapon_Implementation();
+	bool DestoryAllWeapon_Validate();
+#pragma endregion 
+
+#pragma region Reload
+	bool ReloadLock = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UAnimMontage* ReloadMontage;
+	TMap<EBulletType, float> BulletNum;
+	UFUNCTION(BlueprintCallable)
+		void GetAmmoBullet();
+
+	void Reload();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerReload();
+	void ServerReload_Implementation();
+	bool ServerReload_Validate();
+
+	bool bHasAmmo = false;
+	class AMyAmmo* Ammo;
+	void HideClip();
+	void UnhideClip();
+	void DropClip();
+	void GetNewClip();
+
+	void AmmoCheck();
+
+	UFUNCTION(Client, Reliable)
+		void ClientUpdateAmmoUI(int32 ClipCurrentAmmo, int32 GunCurrentAmmo, bool HideAmmoUI);
 
 	UFUNCTION(NetMulticast, Reliable, WithValidation)
 		void MulticastEndSingleReloadAnimation();
 	void MulticastEndSingleReloadAnimation_Implementation();
 	bool MulticastEndSingleReloadAnimation_Validate();
 
+	UFUNCTION(BlueprintCallable)
+		void SingleAnimationAfterReload();
+#pragma endregion
 
+#pragma region Fire
+
+	bool FireLock = false;
+	void InputFirePressed();
+	void InputFireReleased();
+
+	virtual void FireWeaponPrimary();
+
+	//客户端准星扩散以及镜头抖动以及后坐力
+	UFUNCTION(Client, Reliable)
+		void ClientFire();
+
+	//后坐力
+	float NewVerticalRecoilAmount;
+	float OldVerticalRecoilAmount;
+	float VerticalRecoilAmount;
+	float RecoilXCoordPerShoot;
+	float NewHorizontalRecoilAmount;
+	float OldHorizontalRecoilAmount;
+	float HorizontalRecoilAmount;
+	UFUNCTION(Client, Reliable)
+		void ClientRecoil();
+
+	//服务端开火RPC
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UAnimMontage* OneHandHipFireMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UAnimMontage* OneHandADSFireMontage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UAnimMontage* CharacterFireMontage;
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerHook(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
-	void ServerHook_Implementation(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
-	bool ServerHook_Validate(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
-
-	UFUNCTION(Server, Reliable,WithValidation)
-		void ServerFireRifleWeapon(FVector CameraLocation,FRotator CameraRotation,bool IsMoving);
+		void ServerFireRifleWeapon(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
 	void ServerFireRifleWeapon_Implementation(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
 	bool ServerFireRifleWeapon_Validate(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
 
-	UFUNCTION(NetMulticast, Reliable, WithValidation)
-		void MulticastPlayAnimation(class UAnimMontage* Montage);
-	void MulticastPlayAnimation_Implementation(class UAnimMontage* Montage);
-	bool MulticastPlayAnimation_Validate(class UAnimMontage* Montage);
+	//生成子弹
+	class AMyProjectile* Bullet;
+	UFUNCTION(Client, Reliable)
+		void ClientSpawnBullet();
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerChangeWeaponAnimation(int8 index);
-	void ServerChangeWeaponAnimation_Implementation(int8 index);
-	bool ServerChangeWeaponAnimation_Validate(int8 index);
+		void ServerSpawnBullet(UClass* Class, FTransform SpawnTransForm, FVector Velocity);
+	void ServerSpawnBullet_Implementation(UClass* Class, FTransform SpawnTransForm, FVector Velocity);
+	bool ServerSpawnBullet_Validate(UClass* Class, FTransform SpawnTransForm, FVector Velocity);
 
+	//多播开火，计算连发
 	UFUNCTION(NetMulticast, Reliable, WithValidation)
-		void MulticastChangeWeaponAnimation(int8 index);
-	void MulticastChangeWeaponAnimation_Implementation(int8 index);
-	bool MulticastChangeWeaponAnimation_Validate(int8 index);
+		void MulticastFireAnimation(class UAnimMontage* Montage);
+	void MulticastFireAnimation_Implementation(class UAnimMontage* Montage);
+	bool MulticastFireAnimation_Validate(class UAnimMontage* Montage);
 
-#pragma endregion
+	bool isFiring = false;
+	int BurstNum = 0;
+	UFUNCTION()
+		void FireEndDelegate();
 
-#pragma region Hadoken
+	//射线检测对应的检测和伤害计算
+	UPROPERTY(EditAnywhere)
+		bool bLineTraceFire = false;
+	void RifleLineTrace(FVector CameraLocation, FRotator CameraRotation, bool IsMoving);
+	void DamagePlayer(UPhysicalMaterial* PhysicalMaterial, AActor* DamagedActor, FVector& HitFromDirection, FHitResult& HitInfo);
+
+#pragma endregion 
+
+#pragma region SimpleAttack
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TSubclassOf<class AMyDotProjectile> PoisonousFrog;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UAnimMontage* PoisonousMontage;
+	UPROPERTY(EditAnywhere)
+		float PoisonousBaseDamege = 1;
+	UFUNCTION(BlueprintCallable)
+		void PoisonousAttack();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerPoisonous();
+	void ServerPoisonous_Implementation();
+	bool ServerPoisonous_Validate();
+
+	//空手远程攻击
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class AMyProjectile> HadokenBullet;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -307,44 +292,41 @@ public:
 	UPROPERTY(EditAnywhere)
 		float HadokenBaseDamege = 1;
 
-	void HadokenAttack();
+	UFUNCTION(BlueprintCallable)
+		void HadokenAttack();
 	void Hadoken();
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerHadoken();
 	void ServerHadoken_Implementation();
 	bool ServerHadoken_Validate();
-#pragma endregion
 
-#pragma region PoisonousFrog
+	//空手近战攻击
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		TSubclassOf<class AMyDotProjectile> PoisonousFrog;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float DamagePerSec = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		bool isPoisonous;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UAnimMontage* PoisonousMontage;
-	UPROPERTY(EditAnywhere)
-		float PoisonousBasePeriod = 1.0f;
-	UPROPERTY(EditAnywhere)
-		float PoisonousBaseDamege = 1;
+		float HookBaseDamage;
 
-	void PoisonousAttack();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UAnimMontage* HookMontage;
+	UFUNCTION(BlueprintCallable)
+		void Hook();
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerPoisonous();
-	void ServerPoisonous_Implementation();
-	bool ServerPoisonous_Validate();
-#pragma endregion
-
-#pragma region ThreeHookHit
+		void ServerHook();
+	void ServerHook_Implementation();
+	bool ServerHook_Validate();
+	//三连击
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UAnimMontage* ThreeHookHitMontage;
 	UFUNCTION(BlueprintCallable)
-	void ThreeHookHit();
+		void ThreeHookHit();
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerThreeHookHit();
 	void ServerThreeHookHit_Implementation();
 	bool ServerThreeHookHit_Validate();
+	//空手近战攻击伤害判定
+	FVector StartLocation;
+	void StartHookTrace();
+	void EndHookTrace();
+	void StartHookLTrace();
+	void EndHookLTrace();
 #pragma endregion
 
 #pragma region Buff
@@ -356,21 +338,10 @@ public:
 		TMap<EBuffType,bool> BuffMap;
 #pragma endregion
 
-//后坐力
-	float NewVerticalRecoilAmount;
-	float OldVerticalRecoilAmount;
-	float VerticalRecoilAmount;
-	float RecoilXCoordPerShoot;
-	float NewHorizontalRecoilAmount;
-	float OldHorizontalRecoilAmount;
-	float HorizontalRecoilAmount;
-
-//子弹
-	TMap<EBulletType, float> BulletNum;
-	UFUNCTION(BlueprintCallable)
-		void GetAmmoBullet();
 //丢弃武器
+#pragma region Throw
 	void ThrowWeapon();
+
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerThrowWeapon();
 	void ServerThrowWeapon_Implementation();
@@ -380,12 +351,55 @@ public:
 		void MulticastThrowWeapon();
 	void MulticastThrowWeapon_Implementation();
 	bool MulticastThrowWeapon_Validate();
+#pragma endregion
 
-// 狙击枪开镜
+
+// 更换武器
+#pragma region ChangeWeapon
+public:
+	bool ChangeWeaponLock = false;
 	UPROPERTY(EditAnywhere)
-		float FieldOfAimingView;
-	UPROPERTY()
-		UUserWidget* WidgetScope;
+		TArray<class UAnimMontage*> EquipWeaponMontages;
 	UPROPERTY(EditAnywhere)
-		TSubclassOf<UUserWidget> SniperScopeBPClass;
+		TArray<class UAnimMontage*> HolsterWeaponMontages;
+
+	void WeaponR();
+	void WeaponL();
+	void WeaponT();
+	void ChangeToLastWeapon();
+	void ChangeToNextWeapon();
+//RPC
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerChangeWeaponAnimation(int8 index);
+	void ServerChangeWeaponAnimation_Implementation(int8 index);
+	bool ServerChangeWeaponAnimation_Validate(int8 index);
+
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+		void MulticastChangeWeaponAnimation(int8 index);
+	void MulticastChangeWeaponAnimation_Implementation(int8 index);
+	bool MulticastChangeWeaponAnimation_Validate(int8 index);
+//委托
+	UFUNCTION(BlueprintCallable)
+		void EquipWeaponAnimation();
+//蒙太奇骨骼通知
+	void GrabWeaponR();
+	void OnHolster();
+	void GrabWeaponLTemp();
+//武器界面UI
+	UFUNCTION(Client, Reliable)
+		void ClientWeaponUI();
+#pragma endregion 
+
+#pragma region Animation
+
+	//RPC
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+		void MulticastPlayAnimation(class UAnimMontage* Montage);
+	void MulticastPlayAnimation_Implementation(class UAnimMontage* Montage);
+	bool MulticastPlayAnimation_Validate(class UAnimMontage* Montage);
+
+	//委托
+	UFUNCTION(BlueprintCallable)
+		void UnlockAfterAnimation();
+#pragma endregion
 };

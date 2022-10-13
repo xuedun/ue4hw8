@@ -6,7 +6,9 @@
 #include "GameFramework/GameModeBase.h"
 #include "MyAIController.h"
 #include "MyPlayerController.h"
+#include "MyPlayerState.h"
 #include "EMyEnum.h"
+#include "SMyStruct.h"
 #include "MyGameModeBase.generated.h"
 
 /**
@@ -28,18 +30,14 @@ public:
 	void BotDeath(AMyAIControllerBot* AIC, AController* DamageCauser, FVector loc, FRotator rot);
 	UFUNCTION(BlueprintImplementableEvent)
 		void UpdateProtecteeHealthUI(float NewHealth);
-	void StartPlay() override;
 
 	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
+		TSubclassOf<APawn> PlayerPawnClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
 		TSubclassOf<APawn> BotPawnClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = GameMode)
 		TSubclassOf<APawn> ProtecteePawnClass;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-		TArray<AActor*> AIPlayerStarts;
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-		TArray<AActor*> ProtecteePlayerStarts;
 	int8 CurrentAIIndex = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<AMyPlayerController*> AICs;
@@ -97,7 +95,6 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 		void UpdateEnemyUI();
 
-protected:
 	UFUNCTION(BlueprintCallable)
 		AMyAIControllerBot* CreateAIController();
 	UFUNCTION(BlueprintCallable)
@@ -106,6 +103,22 @@ protected:
 		void CreateABoss();
 	UFUNCTION(BlueprintCallable)
 		void CreateProtectee();
+
+	void StartPlay() override;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+		TArray<AActor*> AIPlayerStarts;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+		TArray<AActor*> ProtecteePlayerStarts;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+		TArray<AActor*> PlayerStarts;
+	int SpawnIndex = 0;
+
+	void PostLogin(APlayerController* NewPlayer) override;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+		TArray<AMyPlayerController*> PlayerControllerArray;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+		TArray<AMyPlayerState*> PlayerStateArray;
+	
 
 };
 

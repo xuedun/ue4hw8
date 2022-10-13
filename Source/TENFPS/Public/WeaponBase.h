@@ -14,10 +14,11 @@ UCLASS()
 class TENFPS_API AWeaponBase : public AActor
 {
 	GENERATED_BODY()
-
+protected:
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 public:
 //Component 包括枪骨骼网格体以及碰撞体
-
 #pragma region Component
 	UPROPERTY(EditAnywhere)
 		class USkeletalMeshComponent* WeaponMesh;
@@ -105,18 +106,15 @@ public:
 	void EquipWeapon();
 
 #pragma region Animation
+	void ShootingEffect();
 	void FireAnimation(float MotagePlayRate);
 	UFUNCTION()
-	void EndAnimation(class UAnimMontage* Montage);
+		void EndAnimation(class UAnimMontage* Montage);
 	UFUNCTION(NetMulticast, Reliable, WithValidation)
 		void MulticastAnimation(class UAnimMontage* Montage);
 	void MulticastAnimation_Implementation(class UAnimMontage* Montage);
 	bool MulticastAnimation_Validate(class UAnimMontage* Montage);
-	void ShootingEffect();
 #pragma endregion
-	
-protected:
-	virtual void BeginPlay() override;
-	virtual void Tick(float DeltaTime) override;
+
 
 };

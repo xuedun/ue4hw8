@@ -22,7 +22,7 @@ void AMyDotProjectile::OnHit(class UPrimitiveComponent* OverlappedComponent, AAc
 			if (HasSameGroupTag(Cast<AController>(GetOwner())->GetPawn(), OtherActor)) return;
 			if (Char)
 			{
-				Char->isPoisonous = true;
+//				Char->isPoisonous = true;
 				Char->DamagePerSec += 5;
 				IgnoreList.Add(OtherActor);
 			}
@@ -35,7 +35,7 @@ void AMyDotProjectile::OnHit(class UPrimitiveComponent* OverlappedComponent, AAc
 	{	
 //		if ((Tags.Contains(TEXT("Player")) && OtherActor->Tags.Contains(TEXT("Player")))||Tags.Contains(TEXT("Attacker")) && OtherActor->Tags.Contains(TEXT("Attacker"))) return;
 		if (HasSameGroupTag(this, OtherActor)) return;
-		Char->isPoisonous = true;
+//		Char->isPoisonous = true;
 		Char->DamagePerSec += 5;
 		IgnoreList.Add(OtherActor);
 	}
@@ -52,7 +52,7 @@ void AMyDotProjectile::StopOnHit(class UPrimitiveComponent* OverlappedComponent,
 		if (!IgnoreList.Contains(OtherActor)) return;
 //		if (Tags.Contains(TEXT("Player")) && OtherActor->Tags.Contains(TEXT("Player"))) return;
 		if (Tags.Contains(TEXT("Attacker")) && OtherActor->Tags.Contains(TEXT("Attacker"))) return;
-		Char->isPoisonous = false;
+//		Char->isPoisonous = false;
 		Char->DamagePerSec -= 5;
 		IgnoreList.Remove(OtherActor);
 //		UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("%i"), Char->DamagePerSec));

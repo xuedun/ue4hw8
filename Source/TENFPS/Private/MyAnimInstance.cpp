@@ -3,12 +3,12 @@
 
 #include "MyAnimInstance.h"
 #include "CharacterBase.h"
-
+#include "Kismet/KismetSystemLibrary.h"
 void UMyAnimInstance::AnimNotify_GrabWeaponR(UAnimNotify* Notify)
 {
-//	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("AnimNotify_GrabWeaponR"));
+//	UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("AnimNotify_GrabWeaponR")));
+//	if(!Owner) GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("ERROR"));
 	Owner->GrabWeaponR();
-
 }
 
 void UMyAnimInstance::AnimNotify_OnHolster(UAnimNotify* Notify)
